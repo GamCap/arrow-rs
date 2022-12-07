@@ -43,10 +43,13 @@
 //! ```
 
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
+use std::ops::Neg;
 use std::sync::Arc;
 
 use indexmap::map::IndexMap as HashMap;
 use indexmap::set::IndexSet as HashSet;
+use lazy_static::lazy_static;
+use regex::internal::Input;
 use serde_json::json;
 use serde_json::{map::Map as JsonMap, Value};
 
@@ -56,6 +59,20 @@ use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 use crate::util::bit_util;
 use crate::{array::*, buffer::Buffer};
+
+lazy_static! {
+    static ref PARSE_DECIMAL_RE: Regex =
+        Regex::new(r"^-?(\d+\.?\d*|\d*\.?\d+)$").unwrap();
+    static ref DECIMAL_RE: Regex = Regex::new(r"^-?(\d*\.\d+|\d+\.\d*)$").unwrap();
+    static ref INTEGER_RE: Regex = Regex::new(r"^-?(\d+)$").unwrap();
+    static ref BOOLEAN_RE: Regex = RegexBuilder::new(r"^(true)$|^(false)$")
+        .case_insensitive(true)
+        .build()
+        .unwrap();
+    static ref DATE_RE: Regex = Regex::new(r"^\d{4}-\d\d-\d\d$").unwrap();
+    static ref DATETIME_RE: Regex =
+        Regex::new(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$").unwrap();
+}
 
 #[derive(Debug, Clone)]
 enum InferredType {
@@ -1307,10 +1324,12 @@ impl Decoder {
                         field.data_type(),
                         map_field,
                     ),
-                    DataType::Decimal(_, _) => self.build_decimal_array(
+                    DataType::Decimal(precision, scale) => self.build_decimal_array(
                         rows,
                         field.name(),
-                        field.data_type()
+                        field.data_type(),
+                        *precision,
+                        *scale
                     ),
                     _ => Err(ArrowError::JsonError(format!(
                         "{:?} type is not supported",
@@ -1327,6 +1346,8 @@ impl Decoder {
         rows: &[Value],
         field_name: &str,
         data_type: &DataType,
+        precision: usize,
+        scale: usize,
     ) -> Result<ArrayRef> {
         let mut builder = match data_type {
             DataType::Decimal(precision, scale) => {
@@ -1340,20 +1361,26 @@ impl Decoder {
         };
         for row in rows {
             match row.get(field_name) {
-                Some(Value::Number(num)) => {
-                    if num.is_i64() {
-                        builder.append_value(num.as_i64().unwrap().into())?;
-                    } else if num.is_f64() {
-                        builder.append_value(num.as_f64().unwrap().into())?;
-                    } else if num.is_u64() {
-                        builder.append_value(num.as_u64().unwrap().into())?;
-                    }
-                    else {
-                        builder.append_null()?;
-                    }
-                }
-                Some(Value::Null) => {
+                None => {
+                    // No data for this row
                     builder.append_null()?;
+                }
+                Some(s) => {
+                    if s.is_empty() {
+                        // append null
+                        builder.append_null()?;
+                    } else {
+                        let decimal_value: Result<i128> =
+                            parse_decimal_with_parameter(s.as_str()?, precision, scale);
+                        match decimal_value {
+                            Ok(v) => {
+                                builder.append_value(v)?;
+                            }
+                            Err(e) => {
+                                return Err(e);
+                            }
+                        }
+                    }
                 }
                 _ => {
                     return Err(ArrowError::JsonError(
@@ -1518,6 +1545,68 @@ impl Decoder {
             .collect::<Vec<Option<T::Native>>>();
         let array = values.iter().collect::<PrimitiveArray<T>>();
         array.data().clone()
+    }
+}
+
+fn parse_decimal_with_parameter(s: &str, precision: usize, scale: usize) -> Result<i128> {
+    if PARSE_DECIMAL_RE.is_match(s) {
+        let mut offset = s.len();
+        let len = s.len();
+        let mut base = 1;
+
+        // handle the value after the '.' and meet the scale
+        let delimiter_position = s.find('.');
+        match delimiter_position {
+            None => {
+                // there is no '.'
+                base = 10_i128.pow(scale as u32);
+            }
+            Some(mid) => {
+                // there is the '.'
+                if len - mid >= scale + 1 {
+                    // If the string value is "123.12345" and the scale is 2, we should just remain '.12' and drop the '345' value.
+                    offset -= len - mid - 1 - scale;
+                } else {
+                    // If the string value is "123.12" and the scale is 4, we should append '00' to the tail.
+                    base = 10_i128.pow((scale + 1 + mid - len) as u32);
+                }
+            }
+        };
+
+        // each byte is digit、'-' or '.'
+        let bytes = s.as_bytes();
+        let mut negative = false;
+        let mut result: i128 = 0;
+
+        bytes[0..offset].iter().rev().for_each(|&byte| match byte {
+            b'-' => {
+                negative = true;
+            }
+            b'0'..=b'9' => {
+                result += i128::from(byte - b'0') * base;
+                base *= 10;
+            }
+            // because of the PARSE_DECIMAL_RE, bytes just contains digit、'-' and '.'.
+            _ => {}
+        });
+
+        if negative {
+            result = result.neg();
+        }
+        if result > MAX_DECIMAL_FOR_EACH_PRECISION[precision - 1]
+            || result < MIN_DECIMAL_FOR_EACH_PRECISION[precision - 1]
+        {
+            return Err(ArrowError::ParseError(format!(
+                "parse decimal overflow, the precision {}, the scale {}, the value {}",
+                precision, scale, s
+            )));
+        }
+        Ok(result)
+    } else {
+        Err(ArrowError::ParseError(format!(
+            "can't parse the string value {} to decimal",
+            s
+        )))
     }
 }
 
