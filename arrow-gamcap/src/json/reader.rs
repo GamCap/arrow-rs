@@ -49,7 +49,7 @@ use std::sync::Arc;
 use indexmap::map::IndexMap as HashMap;
 use indexmap::set::IndexSet as HashSet;
 use lazy_static::lazy_static;
-use regex::Regex;
+use regex::internal::Input;
 use serde_json::json;
 use serde_json::{map::Map as JsonMap, Value};
 
@@ -63,6 +63,15 @@ use crate::{array::*, buffer::Buffer};
 lazy_static! {
     static ref PARSE_DECIMAL_RE: Regex =
         Regex::new(r"^-?(\d+\.?\d*|\d*\.?\d+)$").unwrap();
+    static ref DECIMAL_RE: Regex = Regex::new(r"^-?(\d*\.\d+|\d+\.\d*)$").unwrap();
+    static ref INTEGER_RE: Regex = Regex::new(r"^-?(\d+)$").unwrap();
+    static ref BOOLEAN_RE: Regex = RegexBuilder::new(r"^(true)$|^(false)$")
+        .case_insensitive(true)
+        .build()
+        .unwrap();
+    static ref DATE_RE: Regex = Regex::new(r"^\d{4}-\d\d-\d\d$").unwrap();
+    static ref DATETIME_RE: Regex =
+        Regex::new(r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$").unwrap();
 }
 
 #[derive(Debug, Clone)]
@@ -1357,24 +1366,20 @@ impl Decoder {
                     builder.append_null()?;
                 }
                 Some(s) => {
-                    if let Some(str_v) = s.as_str() {
-                        if str_v.is_empty() {
-                            // append null
-                            builder.append_null()?;
-                        } else {
-                            let decimal_value: Result<i128> =
-                                parse_decimal_with_parameter(str_v, precision, scale);
-                            match decimal_value {
-                                Ok(v) => {
-                                    builder.append_value(v)?;
-                                }
-                                Err(e) => {
-                                    return Err(e);
-                                }
+                    if s.is_empty() {
+                        // append null
+                        builder.append_null()?;
+                    } else {
+                        let decimal_value: Result<i128> =
+                            parse_decimal_with_parameter(s.as_str()?, precision, scale);
+                        match decimal_value {
+                            Ok(v) => {
+                                builder.append_value(v)?;
+                            }
+                            Err(e) => {
+                                return Err(e);
                             }
                         }
-                    }else {
-                        builder.append_null()?;
                     }
                 }
                 _ => {
