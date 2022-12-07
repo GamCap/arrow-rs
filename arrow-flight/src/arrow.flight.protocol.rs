@@ -287,7 +287,7 @@ pub mod flight_service_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/arrow.flight.protocol.FlightService/Handshake",
+                "/arrow-gamcap.flight.protocol.FlightService/Handshake",
             );
             self.inner
                 .streaming(request.into_streaming_request(), path, codec)
@@ -315,7 +315,7 @@ pub mod flight_service_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/arrow.flight.protocol.FlightService/ListFlights",
+                "/arrow-gamcap.flight.protocol.FlightService/ListFlights",
             );
             self.inner
                 .server_streaming(request.into_request(), path, codec)
@@ -344,7 +344,7 @@ pub mod flight_service_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/arrow.flight.protocol.FlightService/GetFlightInfo",
+                "/arrow-gamcap.flight.protocol.FlightService/GetFlightInfo",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -365,7 +365,7 @@ pub mod flight_service_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/arrow.flight.protocol.FlightService/GetSchema",
+                "/arrow-gamcap.flight.protocol.FlightService/GetSchema",
             );
             self.inner.unary(request.into_request(), path, codec).await
         }
@@ -389,7 +389,7 @@ pub mod flight_service_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/arrow.flight.protocol.FlightService/DoGet",
+                "/arrow-gamcap.flight.protocol.FlightService/DoGet",
             );
             self.inner
                 .server_streaming(request.into_request(), path, codec)
@@ -417,7 +417,7 @@ pub mod flight_service_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/arrow.flight.protocol.FlightService/DoPut",
+                "/arrow-gamcap.flight.protocol.FlightService/DoPut",
             );
             self.inner
                 .streaming(request.into_streaming_request(), path, codec)
@@ -444,7 +444,7 @@ pub mod flight_service_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/arrow.flight.protocol.FlightService/DoExchange",
+                "/arrow-gamcap.flight.protocol.FlightService/DoExchange",
             );
             self.inner
                 .streaming(request.into_streaming_request(), path, codec)
@@ -470,7 +470,7 @@ pub mod flight_service_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/arrow.flight.protocol.FlightService/DoAction",
+                "/arrow-gamcap.flight.protocol.FlightService/DoAction",
             );
             self.inner
                 .server_streaming(request.into_request(), path, codec)
@@ -495,7 +495,7 @@ pub mod flight_service_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/arrow.flight.protocol.FlightService/ListActions",
+                "/arrow-gamcap.flight.protocol.FlightService/ListActions",
             );
             self.inner
                 .server_streaming(request.into_request(), path, codec)
@@ -686,7 +686,7 @@ pub mod flight_service_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/arrow.flight.protocol.FlightService/Handshake" => {
+                "/arrow-gamcap.flight.protocol.FlightService/Handshake" => {
                     #[allow(non_camel_case_types)]
                     struct HandshakeSvc<T: FlightService>(pub Arc<T>);
                     impl<T: FlightService>
@@ -727,7 +727,7 @@ pub mod flight_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/arrow.flight.protocol.FlightService/ListFlights" => {
+                "/arrow-gamcap.flight.protocol.FlightService/ListFlights" => {
                     #[allow(non_camel_case_types)]
                     struct ListFlightsSvc<T: FlightService>(pub Arc<T>);
                     impl<T: FlightService>
@@ -766,7 +766,7 @@ pub mod flight_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/arrow.flight.protocol.FlightService/GetFlightInfo" => {
+                "/arrow-gamcap.flight.protocol.FlightService/GetFlightInfo" => {
                     #[allow(non_camel_case_types)]
                     struct GetFlightInfoSvc<T: FlightService>(pub Arc<T>);
                     impl<T: FlightService>
@@ -803,7 +803,7 @@ pub mod flight_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/arrow.flight.protocol.FlightService/GetSchema" => {
+                "/arrow-gamcap.flight.protocol.FlightService/GetSchema" => {
                     #[allow(non_camel_case_types)]
                     struct GetSchemaSvc<T: FlightService>(pub Arc<T>);
                     impl<T: FlightService>
@@ -839,7 +839,7 @@ pub mod flight_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/arrow.flight.protocol.FlightService/DoGet" => {
+                "/arrow-gamcap.flight.protocol.FlightService/DoGet" => {
                     #[allow(non_camel_case_types)]
                     struct DoGetSvc<T: FlightService>(pub Arc<T>);
                     impl<T: FlightService>
@@ -878,7 +878,7 @@ pub mod flight_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/arrow.flight.protocol.FlightService/DoPut" => {
+                "/arrow-gamcap.flight.protocol.FlightService/DoPut" => {
                     #[allow(non_camel_case_types)]
                     struct DoPutSvc<T: FlightService>(pub Arc<T>);
                     impl<T: FlightService>
@@ -917,7 +917,7 @@ pub mod flight_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/arrow.flight.protocol.FlightService/DoExchange" => {
+                "/arrow-gamcap.flight.protocol.FlightService/DoExchange" => {
                     #[allow(non_camel_case_types)]
                     struct DoExchangeSvc<T: FlightService>(pub Arc<T>);
                     impl<T: FlightService>
@@ -956,7 +956,7 @@ pub mod flight_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/arrow.flight.protocol.FlightService/DoAction" => {
+                "/arrow-gamcap.flight.protocol.FlightService/DoAction" => {
                     #[allow(non_camel_case_types)]
                     struct DoActionSvc<T: FlightService>(pub Arc<T>);
                     impl<T: FlightService>
@@ -995,7 +995,7 @@ pub mod flight_service_server {
                     };
                     Box::pin(fut)
                 }
-                "/arrow.flight.protocol.FlightService/ListActions" => {
+                "/arrow-gamcap.flight.protocol.FlightService/ListActions" => {
                     #[allow(non_camel_case_types)]
                     struct ListActionsSvc<T: FlightService>(pub Arc<T>);
                     impl<T: FlightService>
@@ -1066,6 +1066,6 @@ pub mod flight_service_server {
         }
     }
     impl<T: FlightService> tonic::transport::NamedService for FlightServiceServer<T> {
-        const NAME: &'static str = "arrow.flight.protocol.FlightService";
+        const NAME: &'static str = "arrow-gamcap.flight.protocol.FlightService";
     }
 }

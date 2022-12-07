@@ -37,14 +37,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // read file contents to string
         let mut file = OpenOptions::new()
             .read(true)
-            .open("src/arrow.flight.protocol.rs")?;
+            .open("src/arrow-gamcap.flight.protocol.rs")?;
         let mut buffer = String::new();
         file.read_to_string(&mut buffer)?;
         // append warning that file was auto-generate
         let mut file = OpenOptions::new()
             .write(true)
             .truncate(true)
-            .open("src/arrow.flight.protocol.rs")?;
+            .open("src/arrow-gamcap.flight.protocol.rs")?;
         file.write_all("// This file was automatically generated through the build.rs script, and should not be edited.\n\n".as_bytes())?;
         file.write_all(buffer.as_bytes())?;
     }

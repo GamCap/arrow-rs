@@ -45,7 +45,7 @@ pub fn flight_data_from_arrow_batch(
     (flight_dictionaries, flight_batch)
 }
 
-/// Convert `FlightData` (with supplied schema and dictionaries) to an arrow `RecordBatch`.
+/// Convert `FlightData` (with supplied schema and dictionaries) to an arrow-gamcap `RecordBatch`.
 pub fn flight_data_to_arrow_batch(
     data: &FlightData,
     schema: SchemaRef,

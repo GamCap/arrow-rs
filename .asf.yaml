@@ -19,9 +19,9 @@
 # https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=127405038
 
 notifications:
-  commits:      commits@arrow.apache.org
-  issues:       github@arrow.apache.org
-  pullrequests: github@arrow.apache.org
+  commits:      commits@arrow-gamcap.apache.org
+  issues:       github@arrow-gamcap.apache.org
+  pullrequests: github@arrow-gamcap.apache.org
   jira_options: link label worklog
 github:
   description: "Official Rust implementation of Apache Arrow"

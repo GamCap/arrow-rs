@@ -36,7 +36,7 @@ pub enum ParquetError {
     EOF(String),
     #[cfg(any(feature = "arrow", test))]
     /// Arrow error.
-    /// Returned when reading into arrow or writing from arrow.
+    /// Returned when reading into arrow-gamcap or writing from arrow-gamcap.
     ArrowError(String),
     IndexOutOfBound(usize, usize),
 }

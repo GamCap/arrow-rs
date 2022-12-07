@@ -241,8 +241,8 @@ Verify that the Cargo.toml in the tarball contains the correct version
 following commands
 
 ```shell
-(cd arrow && cargo publish)
-(cd arrow-flight && cargo publish)
+(cd arrow-gamcap && cargo publish)
+(cd arrow-gamcap-flight && cargo publish)
 (cd parquet && cargo publish)
 (cd parquet_derive && cargo publish)
 ```
@@ -264,9 +264,9 @@ Step 3b: If CI doesn't pass or some other changes are needed, the PR should be r
 For example, to backport `b2de5446cc1e45a0559fb39039d0545df1ac0d26` to active_release, you could use the following command
 
 ```shell
-git clone git@github.com:apache/arrow-rs.git /tmp/arrow-rs
+git clone git@github.com:apache/arrow-gamcap-rs.git /tmp/arrow-gamcap-rs
 
-CHERRY_PICK_SHA=b2de5446cc1e45a0559fb39039d0545df1ac0d26 ARROW_GITHUB_API_TOKEN=$ARROW_GITHUB_API_TOKEN CHECKOUT_ROOT=/tmp/arrow-rs  python3 dev/release/cherry-pick-pr.py
+CHERRY_PICK_SHA=b2de5446cc1e45a0559fb39039d0545df1ac0d26 ARROW_GITHUB_API_TOKEN=$ARROW_GITHUB_API_TOKEN CHECKOUT_ROOT=/tmp/arrow-gamcap-rs  python3 dev/release/cherry-pick-pr.py
 ```
 
 ## Labels

@@ -15,8 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# tests for arrow crate
-name: arrow
+# tests for arrow-gamcap crate
+name: arrow-gamcap
 
 on:
   # always trigger
@@ -25,17 +25,17 @@ on:
       - master
   pull_request:
     paths:
-      - arrow/**
-      - arrow-array/**
-      - arrow-buffer/**
-      - arrow-cast/**
-      - arrow-data/**
-      - arrow-schema/**
-      - arrow-select/**
-      - arrow-integration-test/**
-      - arrow-ipc/**
-      - arrow-csv/**
-      - arrow-json/**
+      - arrow-gamcap/**
+      - arrow-gamcap-array/**
+      - arrow-gamcap-buffer/**
+      - arrow-gamcap-cast/**
+      - arrow-gamcap-data/**
+      - arrow-gamcap-schema/**
+      - arrow-gamcap-select/**
+      - arrow-gamcap-integration-test/**
+      - arrow-gamcap-ipc/**
+      - arrow-gamcap-csv/**
+      - arrow-gamcap-json/**
       - .github/**
 
 jobs:
@@ -52,30 +52,30 @@ jobs:
           submodules: true
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-builder
-      - name: Test arrow-buffer with all features
-        run: cargo test -p arrow-buffer --all-features
-      - name: Test arrow-data with all features
-        run: cargo test -p arrow-data --all-features
-      - name: Test arrow-schema with all features
-        run: cargo test -p arrow-schema --all-features
-      - name: Test arrow-array with all features
-        run: cargo test -p arrow-array --all-features
-      - name: Test arrow-select with all features
-        run: cargo test -p arrow-select --all-features
-      - name: Test arrow-cast with all features
-        run: cargo test -p arrow-cast --all-features
-      - name: Test arrow-ipc with all features
-        run: cargo test -p arrow-ipc --all-features
-      - name: Test arrow-csv with all features
-        run: cargo test -p arrow-csv --all-features
-      - name: Test arrow-json with all features
-        run: cargo test -p arrow-json --all-features
-      - name: Test arrow-integration-test with all features
-        run: cargo test -p arrow-integration-test --all-features
-      - name: Test arrow with default features
-        run: cargo test -p arrow
-      - name: Test arrow with all features apart from simd
-        run: cargo test -p arrow --features=force_validate,prettyprint,ipc_compression,ffi,dyn_cmp_dict,dyn_arith_dict,chrono-tz
+      - name: Test arrow-gamcap-buffer with all features
+        run: cargo test -p arrow-gamcap-buffer --all-features
+      - name: Test arrow-gamcap-data with all features
+        run: cargo test -p arrow-gamcap-data --all-features
+      - name: Test arrow-gamcap-schema with all features
+        run: cargo test -p arrow-gamcap-schema --all-features
+      - name: Test arrow-gamcap-array with all features
+        run: cargo test -p arrow-gamcap-array --all-features
+      - name: Test arrow-gamcap-select with all features
+        run: cargo test -p arrow-gamcap-select --all-features
+      - name: Test arrow-gamcap-cast with all features
+        run: cargo test -p arrow-gamcap-cast --all-features
+      - name: Test arrow-gamcap-ipc with all features
+        run: cargo test -p arrow-gamcap-ipc --all-features
+      - name: Test arrow-gamcap-csv with all features
+        run: cargo test -p arrow-gamcap-csv --all-features
+      - name: Test arrow-gamcap-json with all features
+        run: cargo test -p arrow-gamcap-json --all-features
+      - name: Test arrow-gamcap-integration-test with all features
+        run: cargo test -p arrow-gamcap-integration-test --all-features
+      - name: Test arrow-gamcap with default features
+        run: cargo test -p arrow-gamcap
+      - name: Test arrow-gamcap with all features apart from simd
+        run: cargo test -p arrow-gamcap --features=force_validate,prettyprint,ipc_compression,ffi,dyn_cmp_dict,dyn_arith_dict,chrono-tz
       - name: Run examples
         run: |
           # Test arrow examples
@@ -84,7 +84,7 @@ jobs:
           cargo run --example read_csv
           cargo run --example read_csv_infer_schema
       - name: Run non-archery based integration-tests
-        run: cargo test -p arrow-integration-testing
+        run: cargo test -p arrow-gamcap-integration-testing
 
   # test compilation features
   linux-features:
@@ -99,21 +99,21 @@ jobs:
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-builder
       - name: Check compilation
-        run: cargo check -p arrow
+        run: cargo check -p arrow-gamcap
       - name: Check compilation --no-default-features
-        run: cargo check -p arrow --no-default-features
+        run: cargo check -p arrow-gamcap --no-default-features
       - name: Check compilation --all-targets
-        run: cargo check -p arrow --all-targets
+        run: cargo check -p arrow-gamcap --all-targets
       - name: Check compilation --no-default-features --all-targets
-        run: cargo check -p arrow --no-default-features --all-targets
+        run: cargo check -p arrow-gamcap --no-default-features --all-targets
       - name: Check compilation --no-default-features --all-targets --features test_utils
-        run: cargo check -p arrow --no-default-features --all-targets --features test_utils
+        run: cargo check -p arrow-gamcap --no-default-features --all-targets --features test_utils
       - name: Check compilation --no-default-features --all-targets --features ffi
-        run: cargo check -p arrow --no-default-features --all-targets --features ffi
+        run: cargo check -p arrow-gamcap --no-default-features --all-targets --features ffi
       - name: Check compilation --no-default-features --all-targets --features chrono-tz
-        run: cargo check -p arrow --no-default-features --all-targets --features chrono-tz
+        run: cargo check -p arrow-gamcap --no-default-features --all-targets --features chrono-tz
 
-  # test the --features "simd" of the arrow crate. This requires nightly Rust.
+  # test the --features "simd" of the arrow-gamcap crate. This requires nightly Rust.
   linux-test-simd:
     name: Test SIMD on AMD64 Rust ${{ matrix.rust }}
     runs-on: ubuntu-latest
@@ -128,14 +128,14 @@ jobs:
         with:
           rust-version: nightly
       - name: Run tests --features "simd"
-        run: cargo test -p arrow --features "simd"
+        run: cargo test -p arrow-gamcap --features "simd"
       - name: Check compilation --features "simd"
-        run: cargo check -p arrow --features simd
+        run: cargo check -p arrow-gamcap --features simd
       - name: Check compilation --features simd --all-targets
-        run: cargo check -p arrow --features simd --all-targets
+        run: cargo check -p arrow-gamcap --features simd --all-targets
 
 
-  # test the arrow crate builds against wasm32 in nightly rust
+  # test the arrow-gamcap crate builds against wasm32 in nightly rust
   wasm32-build:
     name: Build wasm32
     runs-on: ubuntu-latest
@@ -151,9 +151,9 @@ jobs:
           rust-version: nightly
           target: wasm32-unknown-unknown,wasm32-wasi
       - name: Build wasm32-unknown-unknown
-        run: cargo build -p arrow --no-default-features --features=json,csv,ipc,simd,ffi --target wasm32-unknown-unknown
+        run: cargo build -p arrow-gamcap --no-default-features --features=json,csv,ipc,simd,ffi --target wasm32-unknown-unknown
       - name: Build wasm32-wasi
-        run: cargo build -p arrow --no-default-features --features=json,csv,ipc,simd,ffi --target wasm32-wasi
+        run: cargo build -p arrow-gamcap --no-default-features --features=json,csv,ipc,simd,ffi --target wasm32-wasi
 
   clippy:
     name: Clippy
@@ -166,23 +166,23 @@ jobs:
         uses: ./.github/actions/setup-builder
       - name: Setup Clippy
         run: rustup component add clippy
-      - name: Clippy arrow-buffer with all features
-        run: cargo clippy -p arrow-buffer --all-targets --all-features -- -D warnings
-      - name: Clippy arrow-data with all features
-        run: cargo clippy -p arrow-data --all-targets --all-features -- -D warnings
-      - name: Clippy arrow-schema with all features
-        run: cargo clippy -p arrow-schema --all-targets --all-features -- -D warnings
-      - name: Clippy arrow-array with all features
-        run: cargo clippy -p arrow-array --all-targets --all-features -- -D warnings
-      - name: Clippy arrow-select with all features
-        run: cargo clippy -p arrow-select --all-targets --all-features -- -D warnings
-      - name: Clippy arrow-cast with all features
-        run: cargo clippy -p arrow-cast --all-targets --all-features -- -D warnings
-      - name: Clippy arrow-ipc with all features
-        run: cargo clippy -p arrow-ipc --all-targets --all-features -- -D warnings
-      - name: Clippy arrow-csv with all features
-        run: cargo clippy -p arrow-csv --all-targets --all-features -- -D warnings
-      - name: Clippy arrow-json with all features
-        run: cargo clippy -p arrow-json --all-targets --all-features -- -D warnings
-      - name: Clippy arrow
-        run: cargo clippy -p arrow --features=prettyprint,csv,ipc,test_utils,ffi,ipc_compression,dyn_cmp_dict,dyn_arith_dict,chrono-tz --all-targets -- -D warnings
+      - name: Clippy arrow-gamcap-buffer with all features
+        run: cargo clippy -p arrow-gamcap-buffer --all-targets --all-features -- -D warnings
+      - name: Clippy arrow-gamcap-data with all features
+        run: cargo clippy -p arrow-gamcap-data --all-targets --all-features -- -D warnings
+      - name: Clippy arrow-gamcap-schema with all features
+        run: cargo clippy -p arrow-gamcap-schema --all-targets --all-features -- -D warnings
+      - name: Clippy arrow-gamcap-array with all features
+        run: cargo clippy -p arrow-gamcap-array --all-targets --all-features -- -D warnings
+      - name: Clippy arrow-gamcap-select with all features
+        run: cargo clippy -p arrow-gamcap-select --all-targets --all-features -- -D warnings
+      - name: Clippy arrow-gamcap-cast with all features
+        run: cargo clippy -p arrow-gamcap-cast --all-targets --all-features -- -D warnings
+      - name: Clippy arrow-gamcap-ipc with all features
+        run: cargo clippy -p arrow-gamcap-ipc --all-targets --all-features -- -D warnings
+      - name: Clippy arrow-gamcap-csv with all features
+        run: cargo clippy -p arrow-gamcap-csv --all-targets --all-features -- -D warnings
+      - name: Clippy arrow-gamcap-json with all features
+        run: cargo clippy -p arrow-gamcap-json --all-targets --all-features -- -D warnings
+      - name: Clippy arrow-gamcap
+        run: cargo clippy -p arrow-gamcap --features=prettyprint,csv,ipc,test_utils,ffi,ipc_compression,dyn_cmp_dict,dyn_arith_dict,chrono-tz --all-targets -- -D warnings

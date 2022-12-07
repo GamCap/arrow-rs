@@ -26,11 +26,11 @@ use arrow::util::integration_util::*;
 use arrow_integration_testing::read_json_file;
 
 fn main() -> Result<()> {
-    let matches = App::new("rust arrow-json-integration-test")
+    let matches = App::new("rust arrow-gamcap-json-integration-test")
         .arg(Arg::with_name("integration")
             .long("integration"))
-        .arg(Arg::with_name("arrow")
-            .long("arrow")
+        .arg(Arg::with_name("arrow-gamcap")
+            .long("arrow-gamcap")
             .help("path to ARROW file")
             .takes_value(true))
         .arg(Arg::with_name("json")
@@ -48,8 +48,8 @@ fn main() -> Result<()> {
         .get_matches();
 
     let arrow_file = matches
-        .value_of("arrow")
-        .expect("must provide path to arrow file");
+        .value_of("arrow-gamcap")
+        .expect("must provide path to arrow-gamcap file");
     let json_file = matches
         .value_of("json")
         .expect("must provide path to json file");
@@ -165,7 +165,7 @@ fn validate(arrow_name: &str, json_name: &str, verbose: bool) -> Result<()> {
             }
         } else {
             return Err(ArrowError::ComputeError(
-                "no more arrow batches left".to_owned(),
+                "no more arrow-gamcap batches left".to_owned(),
             ));
         }
     }

@@ -18,15 +18,15 @@
 //! [Apache Arrow](http://arrow.apache.org/) is a cross-language development platform for
 //! in-memory data.
 //!
-//! This mod provides API for converting between arrow and parquet.
+//! This mod provides API for converting between arrow-gamcap and parquet.
 //!
 //!# Example of writing Arrow record batch to Parquet file
 //!
 //!```rust
-//! use arrow::array::Int32Array;
-//! use arrow::datatypes::{DataType, Field, Schema};
-//! use arrow::record_batch::RecordBatch;
-//! use parquet::arrow::arrow_writer::ArrowWriter;
+//! use arrow-gamcap::array::Int32Array;
+//! use arrow-gamcap::datatypes::{DataType, Field, Schema};
+//! use arrow-gamcap::record_batch::RecordBatch;
+//! use parquet::arrow-gamcap::arrow_writer::ArrowWriter;
 //! use parquet::file::properties::WriterProperties;
 //! use std::fs::File;
 //! use std::sync::Arc;
@@ -66,19 +66,19 @@
 //!     .build();
 //! ```
 //!
-//! # Example of reading parquet file into arrow record batch
+//! # Example of reading parquet file into arrow-gamcap record batch
 //!
 //! ```rust
-//! use arrow::record_batch::RecordBatchReader;
+//! use arrow-gamcap::record_batch::RecordBatchReader;
 //! use parquet::file::reader::SerializedFileReader;
-//! use parquet::arrow::{ParquetFileArrowReader, ArrowReader};
+//! use parquet::arrow-gamcap::{ParquetFileArrowReader, ArrowReader};
 //! use std::sync::Arc;
 //! use std::fs::File;
 //!
-//! # use arrow::array::Int32Array;
-//! # use arrow::datatypes::{DataType, Field, Schema};
-//! # use arrow::record_batch::RecordBatch;
-//! # use parquet::arrow::arrow_writer::ArrowWriter;
+//! # use arrow-gamcap::array::Int32Array;
+//! # use arrow-gamcap::datatypes::{DataType, Field, Schema};
+//! # use arrow-gamcap::record_batch::RecordBatch;
+//! # use parquet::arrow-gamcap::arrow_writer::ArrowWriter;
 //! # let ids = Int32Array::from(vec![1, 2, 3, 4]);
 //! # let schema = Arc::new(Schema::new(vec![
 //! #    Field::new("id", DataType::Int32, false),
@@ -102,7 +102,7 @@
 //! let file_reader = SerializedFileReader::new(file).unwrap();
 //! let mut arrow_reader = ParquetFileArrowReader::new(Arc::new(file_reader));
 //!
-//! println!("Converted arrow schema is: {}", arrow_reader.get_schema().unwrap());
+//! println!("Converted arrow-gamcap schema is: {}", arrow_reader.get_schema().unwrap());
 //! println!("Arrow schema after projection is: {}",
 //!    arrow_reader.get_schema_by_columns(vec![0], true).unwrap());
 //!

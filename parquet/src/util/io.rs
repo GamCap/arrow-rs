@@ -53,7 +53,7 @@ pub trait Position {
 /// This is workaround and alternative for `file.try_clone()` method. It clones `File`
 /// while preserving independent position, which is not available with `try_clone()`.
 ///
-/// Designed after `arrow::io::RandomAccessFile` and `std::io::BufReader`
+/// Designed after `arrow-gamcap::io::RandomAccessFile` and `std::io::BufReader`
 pub struct FileSource<R: ParquetReader> {
     reader: RefCell<R>,
     start: u64,     // start position in a file

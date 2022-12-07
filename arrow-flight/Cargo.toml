@@ -26,7 +26,7 @@ repository = "https://github.com/apache/arrow-rs"
 license = "Apache-2.0"
 
 [dependencies]
-arrow = { path = "../arrow", version = "6.5.0" }
+arrow = { path = "../arrow-gamcap", version = "6.5.0" }
 base64 = "0.13"
 tonic = "0.5"
 bytes = "1"
@@ -40,7 +40,7 @@ futures = { version = "0.3", default-features = false, features = ["alloc"]}
 [build-dependencies]
 tonic-build = "0.5"
 # Pin specific version of the tonic-build dependencies to avoid auto-generated
-# (and checked in) arrow.flight.protocol.rs from changing
+# (and checked in) arrow-gamcap.flight.protocol.rs from changing
 proc-macro2 = "=1.0.27"
 
 #[lib]

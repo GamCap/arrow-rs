@@ -27,14 +27,14 @@ on:
       - master
   pull_request:
     paths:
-      - arrow-array/**
-      - arrow-buffer/**
-      - arrow-cast/**
-      - arrow-data/**
-      - arrow-schema/**
-      - arrow-select/**
-      - arrow-flight/**
-      - arrow-ipc/**
+      - arrow-gamcap-array/**
+      - arrow-gamcap-buffer/**
+      - arrow-gamcap-cast/**
+      - arrow-gamcap-data/**
+      - arrow-gamcap-schema/**
+      - arrow-gamcap-select/**
+      - arrow-gamcap-flight/**
+      - arrow-gamcap-ipc/**
       - .github/**
 
 jobs:
@@ -71,4 +71,4 @@ jobs:
       - name: Setup Clippy
         run: rustup component add clippy
       - name: Run clippy
-        run: cargo clippy -p arrow-flight --all-features -- -D warnings
+        run: cargo clippy -p arrow-gamcap-flight --all-features -- -D warnings

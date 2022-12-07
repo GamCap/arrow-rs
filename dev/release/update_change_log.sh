@@ -22,7 +22,7 @@
 # https://github.com/github-changelog-generator/github-changelog-generator
 #
 # With the config located in
-# arrow-rs/.github_changelog_generator
+# arrow-gamcap-rs/.github_changelog_generator
 #
 # Usage:
 # CHANGELOG_GITHUB_TOKEN=<TOKEN> ./update_change_log.sh

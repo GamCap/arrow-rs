@@ -16,19 +16,19 @@
 # under the License.
 
 arrow:
-  - arrow/**/*
-  - arrow-array/**/*
-  - arrow-buffer/**/*
-  - arrow-cast/**/*
-  - arrow-data/**/*
-  - arrow-schema/**/*
-  - arrow-select/**/*
-  - arrow-ipc/**/*
-  - arrow-csv/**/*
-  - arrow-json/**/*
+  - arrow-gamcap/**/*
+  - arrow-gamcap-array/**/*
+  - arrow-gamcap-buffer/**/*
+  - arrow-gamcap-cast/**/*
+  - arrow-gamcap-data/**/*
+  - arrow-gamcap-schema/**/*
+  - arrow-gamcap-select/**/*
+  - arrow-gamcap-ipc/**/*
+  - arrow-gamcap-csv/**/*
+  - arrow-gamcap-json/**/*
 
 arrow-flight:
-  - arrow-flight/**/*
+  - arrow-gamcap-flight/**/*
 
 parquet:
   - parquet/**/*

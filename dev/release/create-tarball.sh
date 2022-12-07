@@ -20,9 +20,9 @@
 
 
 # This script creates a signed tarball in
-# dev/dist/apache-arrow-rs-<version>-<sha>.tar.gz and uploads it to
-# the "dev" area of the dist.apache.arrow repository and prepares an
-# email for sending to the dev@arrow.apache.org list for a formal
+# dev/dist/apache-arrow-gamcap-rs-<version>-<sha>.tar.gz and uploads it to
+# the "dev" area of the dist.apache.arrow-gamcap repository and prepares an
+# email for sending to the dev@arrow-gamcap.apache.org list for a formal
 # vote.
 #
 # See release/README.md for full release instructions
@@ -36,7 +36,7 @@
 # credentials
 #
 #
-# Based in part on 02-source.sh from apache/arrow
+# Based in part on 02-source.sh from apache/arrow-gamcap
 #
 
 set -e
@@ -55,7 +55,7 @@ rc=$2
 
 release_hash=$(cd "${SOURCE_TOP_DIR}" && git rev-list --max-count=1 ${tag})
 
-release=apache-arrow-rs-${tag}
+release=apache-arrow-gamcap-rs-${tag}
 distdir=${SOURCE_TOP_DIR}/dev/dist/${release}-rc${rc}
 tarname=${release}.tar.gz
 tarball=${distdir}/${tarname}
@@ -115,7 +115,7 @@ echo "Signing tarball and creating checksums"
 gpg --armor --output ${tarball}.asc --detach-sig ${tarball}
 # create signing with relative path of tarball
 # so that they can be verified with a command such as
-#  shasum --check apache-arrow-rs-4.1.0-rc2.tar.gz.sha512
+#  shasum --check apache-arrow-gamcap-rs-4.1.0-rc2.tar.gz.sha512
 (cd ${distdir} && shasum -a 256 ${tarname}) > ${tarball}.sha256
 (cd ${distdir} && shasum -a 512 ${tarname}) > ${tarball}.sha512
 
