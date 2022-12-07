@@ -24,19 +24,19 @@ on:
       - master
   pull_request:
     paths:
-      - arrow-gamcap/**
-      - arrow-gamcap-array/**
-      - arrow-gamcap-buffer/**
-      - arrow-gamcap-cast/**
-      - arrow-gamcap-data/**
-      - arrow-gamcap-schema/**
-      - arrow-gamcap-select/**
-      - arrow-gamcap-ipc/**
-      - arrow-gamcap-csv/**
-      - arrow-gamcap-json/**
-      - arrow-gamcap-pyarrow-integration-testing/**
-      - arrow-gamcap-integration-test/**
-      - arrow-gamcap-integration-testing/**
+      - arrow/**
+      - arrow-array/**
+      - arrow-buffer/**
+      - arrow-cast/**
+      - arrow-data/**
+      - arrow-schema/**
+      - arrow-select/**
+      - arrow-ipc/**
+      - arrow-csv/**
+      - arrow-json/**
+      - arrow-pyarrow-integration-testing/**
+      - arrow-integration-test/**
+      - arrow-integration-testing/**
       - .github/**
 
 jobs:
@@ -45,7 +45,7 @@ jobs:
     name: Archery test With other arrows
     runs-on: ubuntu-latest
     container:
-      image: apache/arrow-gamcap-dev:amd64-conda-integration
+      image: apache/arrow-dev:amd64-conda-integration
     env:
       ARROW_USE_CCACHE: OFF
       ARROW_CPP_EXE_PATH: /build/cpp/debug
@@ -60,7 +60,7 @@ jobs:
     steps:
       # This is necessary so that actions/checkout can find git
       - name: Export conda path
-        run: echo "/opt/conda/envs/arrow-gamcap/bin" >> $GITHUB_PATH
+        run: echo "/opt/conda/envs/arrow/bin" >> $GITHUB_PATH
       # This is necessary so that Rust can find cargo
       - name: Export cargo path
         run: echo "/root/.cargo/bin" >> $GITHUB_PATH
@@ -71,7 +71,7 @@ jobs:
       - name: Checkout Arrow
         uses: actions/checkout@v3
         with:
-          repository: apache/arrow-gamcap
+          repository: apache/arrow
           submodules: true
           fetch-depth: 0
       - name: Checkout Arrow Rust

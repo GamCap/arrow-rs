@@ -39,7 +39,7 @@ use std::io::BufReader;
 use std::sync::Arc;
 
 /// The expected username for the basic auth integration test.
-pub const AUTH_USERNAME: &str = "arrow-gamcap";
+pub const AUTH_USERNAME: &str = "arrow";
 /// The expected password for the basic auth integration test.
 pub const AUTH_PASSWORD: &str = "flight";
 

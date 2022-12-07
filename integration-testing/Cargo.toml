@@ -30,7 +30,7 @@ publish = false
 logging = ["tracing-subscriber"]
 
 [dependencies]
-arrow = { path = "../arrow-gamcap" }
+arrow = { path = "../arrow" }
 arrow-flight = { path = "../arrow-flight" }
 async-trait = "0.1.41"
 clap = "2.33"

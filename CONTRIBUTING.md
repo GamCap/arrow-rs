@@ -30,7 +30,7 @@ cargo build
 You can also use rust's official docker image:
 
 ```bash
-docker run --rm -v $(pwd):/arrow-gamcap-rs -it rust /bin/bash -c "cd /arrow-rs && rustup component add rustfmt && cargo build"
+docker run --rm -v $(pwd):/arrow-rs -it rust /bin/bash -c "cd /arrow-rs && rustup component add rustfmt && cargo build"
 ```
 
 The command above assumes that are in the root directory of the project, not in the same
@@ -39,7 +39,7 @@ directory as this README.md.
 You can also compile specific workspaces:
 
 ```bash
-cd arrow-gamcap && cargo build
+cd arrow && cargo build
 ```
 
 ### Git Submodules
@@ -79,8 +79,8 @@ Run tests using the Rust standard `cargo test` command:
 cargo test
 
 
-# run only tests for the arrow-gamcap crate
-cargo test -p arrow-gamcap
+# run only tests for the arrow crate
+cargo test -p arrow
 ```
 
 ## Code Formatting

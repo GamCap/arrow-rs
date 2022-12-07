@@ -15,13 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! Provides API for converting parquet schema to arrow-gamcap schema and vice versa.
+//! Provides API for converting parquet schema to arrow schema and vice versa.
 //!
-//! The main interfaces for converting parquet schema to arrow-gamcap schema  are
+//! The main interfaces for converting parquet schema to arrow schema  are
 //! `parquet_to_arrow_schema`, `parquet_to_arrow_schema_by_columns` and
 //! `parquet_to_arrow_field`.
 //!
-//! The interfaces for converting arrow-gamcap schema to parquet schema is coming.
+//! The interfaces for converting arrow schema to parquet schema is coming.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -58,7 +58,7 @@ pub fn parquet_to_arrow_schema(
         ))
 }
 
-/// Convert parquet schema to arrow-gamcap schema including optional metadata,
+/// Convert parquet schema to arrow schema including optional metadata,
 /// only preserving some root columns.
 /// This is useful if we have columns `a.b`, `a.c.e` and `a.d`,
 /// and want `a` with all its child fields
@@ -111,7 +111,7 @@ where
     parquet_to_arrow_schema_by_columns(parquet_schema, leaf_columns, key_value_metadata)
 }
 
-/// Convert parquet schema to arrow-gamcap schema including optional metadata,
+/// Convert parquet schema to arrow schema including optional metadata,
 /// only preserving some leaf columns.
 pub fn parquet_to_arrow_schema_by_columns<T>(
     parquet_schema: &SchemaDescriptor,
@@ -218,7 +218,7 @@ fn encode_arrow_schema(schema: &Schema) -> String {
     let data_gen = arrow::ipc::writer::IpcDataGenerator::default();
     let mut serialized_schema = data_gen.schema_to_bytes(schema, &options);
 
-    // manually prepending the length to the schema as arrow-gamcap uses the legacy IPC format
+    // manually prepending the length to the schema as arrow uses the legacy IPC format
     // TODO: change after addressing ARROW-9777
     let schema_len = serialized_schema.ipc_message.len();
     let mut len_prefix_schema = Vec::with_capacity(schema_len + 8);
@@ -260,7 +260,7 @@ pub(crate) fn add_encoded_arrow_schema_to_metadata(
     props.key_value_metadata = Some(meta);
 }
 
-/// Convert arrow-gamcap schema to parquet schema
+/// Convert arrow schema to parquet schema
 pub fn arrow_to_parquet_schema(schema: &Schema) -> Result<SchemaDescriptor> {
     let fields: Result<Vec<TypePtr>> = schema
         .fields()
@@ -297,7 +297,7 @@ fn parse_key_value_metadata(
     }
 }
 
-/// Convert parquet column schema to arrow-gamcap field.
+/// Convert parquet column schema to arrow field.
 pub fn parquet_to_arrow_field(parquet_column: &ColumnDescriptor) -> Result<Field> {
     let schema = parquet_column.self_type();
 
@@ -313,7 +313,7 @@ pub fn decimal_length_from_precision(precision: usize) -> usize {
     (10.0_f64.powi(precision as i32).log2() / 8.0).ceil() as usize
 }
 
-/// Convert an arrow-gamcap field to a parquet `Type`
+/// Convert an arrow field to a parquet `Type`
 fn arrow_to_parquet_type(field: &Field) -> Result<Type> {
     let name = field.name().as_str();
     let repetition = if field.is_nullable() {
@@ -548,7 +548,7 @@ fn arrow_to_parquet_type(field: &Field) -> Result<Type> {
 /// schema together.
 struct ParquetTypeConverter<'a> {
     schema: &'a Type,
-    /// This is the columns that need to be converted to arrow-gamcap schema.
+    /// This is the columns that need to be converted to arrow schema.
     columns_to_convert: &'a HashSet<*const Type>,
 }
 
@@ -571,7 +571,7 @@ impl<'a> ParquetTypeConverter<'a> {
 impl ParquetTypeConverter<'_> {
     // Public interfaces.
 
-    /// Converts parquet schema to arrow-gamcap data type.
+    /// Converts parquet schema to arrow data type.
     ///
     /// This function discards schema name.
     ///
@@ -587,7 +587,7 @@ impl ParquetTypeConverter<'_> {
         }
     }
 
-    /// Converts parquet schema to arrow-gamcap field.
+    /// Converts parquet schema to arrow field.
     ///
     /// This method is roughly the same as
     /// [`to_data_type`](`ParquetTypeConverter::to_data_type`), except it reserves schema
@@ -627,7 +627,7 @@ impl ParquetTypeConverter<'_> {
 
     // Functions for primitive types.
 
-    /// Entry point for converting parquet primitive type to arrow-gamcap type.
+    /// Entry point for converting parquet primitive type to arrow type.
     ///
     /// This function takes care of repetition.
     fn to_primitive_type(&self) -> Result<Option<DataType>> {
@@ -648,7 +648,7 @@ impl ParquetTypeConverter<'_> {
         }
     }
 
-    /// Converting parquet primitive type to arrow-gamcap data type.
+    /// Converting parquet primitive type to arrow data type.
     fn to_primitive_type_inner(&self) -> Result<DataType> {
         match self.schema.get_physical_type() {
             PhysicalType::BOOLEAN => Ok(DataType::Boolean),
@@ -846,7 +846,7 @@ impl ParquetTypeConverter<'_> {
         }
     }
 
-    /// Converts a parquet group type to arrow-gamcap struct.
+    /// Converts a parquet group type to arrow struct.
     fn to_struct(&self) -> Result<Option<DataType>> {
         match self.schema {
             Type::PrimitiveType { .. } => Err(ParquetError::General(format!(
@@ -871,7 +871,7 @@ impl ParquetTypeConverter<'_> {
         }
     }
 
-    /// Converts a parquet list to arrow-gamcap list.
+    /// Converts a parquet list to arrow list.
     ///
     /// To fully understand this algorithm, please refer to
     /// [parquet doc](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md).
@@ -950,7 +950,7 @@ impl ParquetTypeConverter<'_> {
         }
     }
 
-    /// Converts a parquet map to arrow-gamcap map.
+    /// Converts a parquet map to arrow map.
     ///
     /// To fully understand this algorithm, please refer to
     /// [parquet doc](https://github.com/apache/parquet-format/blob/master/LogicalTypes.md).
@@ -1609,7 +1609,7 @@ mod tests {
         ";
         let parquet_group_type = parse_message_type(message_type).unwrap();
 
-        // Expected partial arrow-gamcap schema (columns 0, 3, 4):
+        // Expected partial arrow schema (columns 0, 3, 4):
         // required group group1 {
         //   required int64 leaf1;
         // }
@@ -1660,7 +1660,7 @@ mod tests {
         ";
         let parquet_group_type = parse_message_type(message_type).unwrap();
 
-        // Expected partial arrow-gamcap schema (columns 3, 4, 0):
+        // Expected partial arrow schema (columns 3, 4, 0):
         // required group group1 {
         //   required int64 leaf1;
         // }

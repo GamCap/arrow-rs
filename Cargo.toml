@@ -17,7 +17,7 @@
 
 [workspace]
 members = [
-        "arrow-gamcap",
+        "arrow",
         "parquet",
         "parquet_derive",
         "parquet_derive_test",

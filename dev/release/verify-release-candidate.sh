@@ -45,7 +45,7 @@ download_dist_file() {
 }
 
 download_rc_file() {
-  download_dist_file apache-arrow-gamcap-rs-${VERSION}-rc${RC_NUMBER}/$1
+  download_dist_file apache-arrow-rs-${VERSION}-rc${RC_NUMBER}/$1
 }
 
 import_gpg_keys() {
@@ -118,16 +118,16 @@ test_source_distribution() {
   cargo fmt --all -- --check
 
   # Clone testing repositories if not cloned already
-  git clone https://github.com/apache/arrow-testing.git arrow-gamcap-testing-data
+  git clone https://github.com/apache/arrow-testing.git arrow-testing-data
   git clone https://github.com/apache/parquet-testing.git parquet-testing-data
-  export ARROW_TEST_DATA=$PWD/arrow-gamcap-testing-data/data
+  export ARROW_TEST_DATA=$PWD/arrow-testing-data/data
   export PARQUET_TEST_DATA=$PWD/parquet-testing-data/data
 
   # use local modules because we don't publish modules to crates.io yet
   sed \
     -i.bak \
     -E \
-    -e 's/^arrow-gamcap = "([^"]*)"/arrow-gamcap = { version = "\1", path = "..\/arrow-gamcap" }/g' \
+    -e 's/^arrow = "([^"]*)"/arrow = { version = "\1", path = "..\/arrow" }/g' \
     -e 's/^parquet = "([^"]*)"/parquet = { version = "\1", path = "..\/parquet" }/g' \
     */Cargo.toml
 
@@ -135,12 +135,12 @@ test_source_distribution() {
   cargo test --all
 
   # verify that the crates can be published to crates.io
-  pushd arrow-gamcap
+  pushd arrow
     cargo publish --dry-run
   popd
 
-  # Note can't verify parquet/arrow-gamcap-flight/parquet-derive until arrow-gamcap is actually published
-  # as they depend on arrow-gamcap
+  # Note can't verify parquet/arrow-flight/parquet-derive until arrow is actually published
+  # as they depend on arrow
 
 }
 

@@ -26,16 +26,16 @@ on:
       - master
   pull_request:
     paths:
-      - arrow-gamcap/**
-      - arrow-gamcap-array/**
-      - arrow-gamcap-buffer/**
-      - arrow-gamcap-cast/**
-      - arrow-gamcap-data/**
-      - arrow-gamcap-schema/**
-      - arrow-gamcap-select/**
-      - arrow-gamcap-ipc/**
-      - arrow-gamcap-csv/**
-      - arrow-gamcap-json/**
+      - arrow/**
+      - arrow-array/**
+      - arrow-buffer/**
+      - arrow-cast/**
+      - arrow-data/**
+      - arrow-schema/**
+      - arrow-select/**
+      - arrow-ipc/**
+      - arrow-csv/**
+      - arrow-json/**
       - parquet/**
       - .github/**
 
@@ -78,22 +78,22 @@ jobs:
         # This for each of (library and all-targets), check
         # 1. compiles with default features
         # 1. compiles with no default features
-        # 3. compiles with just arrow-gamcap feature
+        # 3. compiles with just arrow feature
         # 3. compiles with all features
       - name: Check compilation
         run: cargo check -p parquet
       - name: Check compilation --no-default-features
         run: cargo check -p parquet --no-default-features
-      - name: Check compilation --no-default-features --features arrow-gamcap
-        run: cargo check -p parquet --no-default-features --features arrow-gamcap
+      - name: Check compilation --no-default-features --features arrow
+        run: cargo check -p parquet --no-default-features --features arrow
       - name: Check compilation --no-default-features --all-features
         run: cargo check -p parquet --all-features
       - name: Check compilation --all-targets
         run: cargo check -p parquet --all-targets
       - name: Check compilation --all-targets --no-default-features
         run: cargo check -p parquet --all-targets --no-default-features
-      - name: Check compilation  --all-targets --no-default-features --features arrow-gamcap
-        run: cargo check -p parquet --all-targets --no-default-features --features arrow-gamcap
+      - name: Check compilation  --all-targets --no-default-features --features arrow
+        run: cargo check -p parquet --all-targets --no-default-features --features arrow
       - name: Check compilation  --all-targets --all-features
         run: cargo check -p parquet --all-targets --all-features
       - name: Check compilation  --all-targets --no-default-features --features json
@@ -144,7 +144,7 @@ jobs:
           rustup toolchain install ${{ matrix.rust }}
           rustup default ${{ matrix.rust }}
       - name: Install binary for checking
-        run: cargo install --path parquet --bin parquet-show-bloom-filter --features=arrow-gamcap,cli
+        run: cargo install --path parquet --bin parquet-show-bloom-filter --features=arrow,cli
       - name: Run pytest
         run: |
           cd parquet/pytest

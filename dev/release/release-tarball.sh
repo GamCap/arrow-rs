@@ -19,14 +19,14 @@
 #
 
 # This script copies a tarball from the "dev" area of the
-# dist.apache.arrow-gamcap repository to the "release" area
+# dist.apache.arrow repository to the "release" area
 #
 # This script should only be run after the release has been approved
-# by the arrow-gamcap PMC committee.
+# by the arrow PMC committee.
 #
 # See release/README.md for full release instructions
 #
-# Based in part on post-01-upload.sh from apache/arrow-gamcap
+# Based in part on post-01-upload.sh from apache/arrow
 
 
 set -e
@@ -41,7 +41,7 @@ fi
 version=$1
 rc=$2
 
-tmp_dir=tmp-apache-arrow-gamcap-dist
+tmp_dir=tmp-apache-arrow-dist
 
 echo "Recreate temporary directory: ${tmp_dir}"
 rm -rf ${tmp_dir}
@@ -57,7 +57,7 @@ echo "Clone release dist repository"
 svn co https://dist.apache.org/repos/dist/release/arrow ${tmp_dir}/release
 
 echo "Copy ${version}-rc${rc} to release working copy"
-release_version=arrow-gamcap-rs-${version}
+release_version=arrow-rs-${version}
 mkdir -p ${tmp_dir}/release/${release_version}
 cp -r ${tmp_dir}/dev/* ${tmp_dir}/release/${release_version}/
 svn add ${tmp_dir}/release/${release_version}

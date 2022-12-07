@@ -20,5 +20,5 @@ max_width = 90
 
 # ignore generated files
 # ignore = [
-#    "arrow-gamcap/src/ipc/gen",
+#    "arrow/src/ipc/gen",
 #]
