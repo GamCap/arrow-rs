@@ -1341,12 +1341,12 @@ impl Decoder {
         for row in rows {
             match row.get(field_name) {
                 Some(Value::Number(num)) => {
-                    if num.is_i128() {
-                        builder.append_value(num.as_i128().unwrap())?;
-                    } else if num.is_f128() {
-                        builder.append_value(num.as_f128().unwrap())?;
-                    } else if num.is_u128() {
-                        builder.append_value(num.as_u128().unwrap())?;
+                    if num.is_i64() {
+                        builder.append_value(num.as_i64().unwrap().into())?;
+                    } else if num.is_f64() {
+                        builder.append_value(num.as_f64().unwrap().into())?;
+                    } else if num.is_u64() {
+                        builder.append_value(num.as_u64().unwrap().into())?;
                     }
                     else {
                         builder.append_null()?;
