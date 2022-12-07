@@ -15,10 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
-pub mod page_util;
-
-#[cfg(test)]
 pub mod file_util;
-
-#[cfg(test)]
+pub mod page_util;
 pub mod rand_gen;
+
+pub use self::rand_gen::random_bools;
+pub use self::rand_gen::random_bytes;
+pub use self::rand_gen::random_numbers;
+pub use self::rand_gen::random_numbers_range;
+pub use self::rand_gen::RandGen;
+
+pub use self::file_util::get_temp_file;
+pub use self::file_util::get_temp_filename;
+pub use self::file_util::get_test_file;
+pub use self::file_util::get_test_path;
+
+pub use self::page_util::make_pages;

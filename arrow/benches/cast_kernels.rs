@@ -30,7 +30,6 @@ use arrow::compute::cast;
 use arrow::datatypes::*;
 use arrow::util::bench_util::*;
 use arrow::util::test_util::seedable_rng;
-use arrow_buffer::i256;
 
 fn build_array<T: ArrowPrimitiveType>(size: usize) -> ArrayRef
 where
@@ -45,18 +44,17 @@ fn build_utf8_date_array(size: usize, with_nulls: bool) -> ArrayRef {
 
     // use random numbers to avoid spurious compiler optimizations wrt to branching
     let mut rng = seedable_rng();
-    let mut builder = StringBuilder::new();
+    let mut builder = StringBuilder::new(size);
     let range = Uniform::new(0, 737776);
 
     for _ in 0..size {
         if with_nulls && rng.gen::<f32>() > 0.8 {
-            builder.append_null();
+            builder.append_null().unwrap();
         } else {
-            let string = NaiveDate::from_num_days_from_ce_opt(rng.sample(range))
-                .unwrap()
+            let string = NaiveDate::from_num_days_from_ce(rng.sample(range))
                 .format("%Y-%m-%d")
                 .to_string();
-            builder.append_value(&string);
+            builder.append_value(&string).unwrap();
         }
     }
     Arc::new(builder.finish())
@@ -67,53 +65,20 @@ fn build_utf8_date_time_array(size: usize, with_nulls: bool) -> ArrayRef {
 
     // use random numbers to avoid spurious compiler optimizations wrt to branching
     let mut rng = seedable_rng();
-    let mut builder = StringBuilder::new();
+    let mut builder = StringBuilder::new(size);
     let range = Uniform::new(0, 1608071414123);
 
     for _ in 0..size {
         if with_nulls && rng.gen::<f32>() > 0.8 {
-            builder.append_null();
+            builder.append_null().unwrap();
         } else {
-            let string = NaiveDateTime::from_timestamp_opt(rng.sample(range), 0)
-                .unwrap()
+            let string = NaiveDateTime::from_timestamp(rng.sample(range), 0)
                 .format("%Y-%m-%dT%H:%M:%S")
                 .to_string();
-            builder.append_value(&string);
+            builder.append_value(&string).unwrap();
         }
     }
     Arc::new(builder.finish())
-}
-
-fn build_decimal128_array(size: usize, precision: u8, scale: i8) -> ArrayRef {
-    let mut rng = seedable_rng();
-    let mut builder = Decimal128Builder::with_capacity(size);
-
-    for _ in 0..size {
-        builder.append_value(rng.gen_range::<i128, _>(0..1000000000));
-    }
-    Arc::new(
-        builder
-            .finish()
-            .with_precision_and_scale(precision, scale)
-            .unwrap(),
-    )
-}
-
-fn build_decimal256_array(size: usize, precision: u8, scale: i8) -> ArrayRef {
-    let mut rng = seedable_rng();
-    let mut builder = Decimal256Builder::with_capacity(size);
-    let mut bytes = [0; 32];
-    for _ in 0..size {
-        let num = rng.gen_range::<i128, _>(0..1000000000);
-        bytes[0..16].clone_from_slice(&num.to_le_bytes());
-        builder.append_value(i256::from_le_bytes(bytes));
-    }
-    Arc::new(
-        builder
-            .finish()
-            .with_precision_and_scale(precision, scale)
-            .unwrap(),
-    )
 }
 
 // cast array from specified primitive array type to desired data type
@@ -136,9 +101,6 @@ fn add_benchmark(c: &mut Criterion) {
     let time_ms_array = build_array::<TimestampMillisecondType>(512);
     let utf8_date_array = build_utf8_date_array(512, true);
     let utf8_date_time_array = build_utf8_date_time_array(512, true);
-
-    let decimal128_array = build_decimal128_array(512, 10, 3);
-    let decimal256_array = build_decimal256_array(512, 50, 3);
 
     c.bench_function("cast int32 to int32 512", |b| {
         b.iter(|| cast_array(&i32_array, DataType::Int32))
@@ -216,19 +178,6 @@ fn add_benchmark(c: &mut Criterion) {
     });
     c.bench_function("cast utf8 to date64 512", |b| {
         b.iter(|| cast_array(&utf8_date_time_array, DataType::Date64))
-    });
-
-    c.bench_function("cast decimal128 to decimal128 512", |b| {
-        b.iter(|| cast_array(&decimal128_array, DataType::Decimal128(30, 5)))
-    });
-    c.bench_function("cast decimal128 to decimal256 512", |b| {
-        b.iter(|| cast_array(&decimal128_array, DataType::Decimal256(50, 5)))
-    });
-    c.bench_function("cast decimal256 to decimal128 512", |b| {
-        b.iter(|| cast_array(&decimal256_array, DataType::Decimal128(38, 2)))
-    });
-    c.bench_function("cast decimal256 to decimal256 512", |b| {
-        b.iter(|| cast_array(&decimal256_array, DataType::Decimal256(50, 5)))
     });
 }
 

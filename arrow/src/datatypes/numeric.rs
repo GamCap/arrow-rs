@@ -19,7 +19,9 @@ use super::*;
 #[cfg(feature = "simd")]
 use packed_simd::*;
 #[cfg(feature = "simd")]
-use std::ops::{Add, BitAnd, BitAndAssign, BitOr, BitOrAssign, Div, Mul, Not, Rem, Sub};
+use std::ops::{
+    Add, BitAnd, BitAndAssign, BitOr, BitOrAssign, Div, Mul, Neg, Not, Rem, Sub,
+};
 
 /// A subtype of primitive type that represents numeric values.
 ///
@@ -145,20 +147,6 @@ macro_rules! make_numeric_type {
                 // this match will get removed by the compiler since the number of lanes is known at
                 // compile-time for each concrete numeric type
                 match Self::lanes() {
-                    4 => {
-                        // the bit position in each lane indicates the index of that lane
-                        let vecidx = i128x4::new(1, 2, 4, 8);
-
-                        // broadcast the lowermost 8 bits of mask to each lane
-                        let vecmask = i128x4::splat((mask & 0x0F) as i128);
-                        // compute whether the bit corresponding to each lanes index is set
-                        let vecmask = (vecidx & vecmask).eq(vecidx);
-
-                        // transmute is necessary because the different match arms return different
-                        // mask types, at runtime only one of those expressions will exist per type,
-                        // with the type being equal to `SimdMask`.
-                        unsafe { std::mem::transmute(vecmask) }
-                    }
                     8 => {
                         // the bit position in each lane indicates the index of that lane
                         let vecidx = i64x8::new(1, 2, 4, 8, 16, 32, 64, 128);
@@ -360,200 +348,78 @@ make_numeric_type!(Time64MicrosecondType, i64, i64x8, m64x8);
 make_numeric_type!(Time64NanosecondType, i64, i64x8, m64x8);
 make_numeric_type!(IntervalYearMonthType, i32, i32x16, m32x16);
 make_numeric_type!(IntervalDayTimeType, i64, i64x8, m64x8);
-make_numeric_type!(IntervalMonthDayNanoType, i128, i128x4, m128x4);
 make_numeric_type!(DurationSecondType, i64, i64x8, m64x8);
 make_numeric_type!(DurationMillisecondType, i64, i64x8, m64x8);
 make_numeric_type!(DurationMicrosecondType, i64, i64x8, m64x8);
 make_numeric_type!(DurationNanosecondType, i64, i64x8, m64x8);
-make_numeric_type!(Decimal128Type, i128, i128x4, m128x4);
 
-#[cfg(not(feature = "simd"))]
-impl ArrowNumericType for Float16Type {}
-
+/// A subtype of primitive type that represents signed numeric values.
+///
+/// SIMD operations are defined in this trait if available on the target system.
 #[cfg(feature = "simd")]
-impl ArrowNumericType for Float16Type {
-    type Simd = <Float32Type as ArrowNumericType>::Simd;
-    type SimdMask = <Float32Type as ArrowNumericType>::SimdMask;
+pub trait ArrowSignedNumericType: ArrowNumericType
+where
+    Self::SignedSimd: Neg<Output = Self::SignedSimd>,
+{
+    /// Defines the SIMD type that should be used for this numeric type
+    type SignedSimd;
 
-    fn lanes() -> usize {
-        Float32Type::lanes()
-    }
+    /// Loads a slice of signed numeric type into a SIMD register
+    fn load_signed(slice: &[Self::Native]) -> Self::SignedSimd;
 
-    fn init(value: Self::Native) -> Self::Simd {
-        Float32Type::init(value.to_f32())
-    }
-
-    fn load(slice: &[Self::Native]) -> Self::Simd {
-        let mut s = [0_f32; Self::Simd::lanes()];
-        s.iter_mut().zip(slice).for_each(|(o, a)| *o = a.to_f32());
-        Float32Type::load(&s)
-    }
-
-    fn mask_init(value: bool) -> Self::SimdMask {
-        Float32Type::mask_init(value)
-    }
-
-    fn mask_from_u64(mask: u64) -> Self::SimdMask {
-        Float32Type::mask_from_u64(mask)
-    }
-
-    fn mask_to_u64(mask: &Self::SimdMask) -> u64 {
-        Float32Type::mask_to_u64(mask)
-    }
-
-    fn mask_get(mask: &Self::SimdMask, idx: usize) -> bool {
-        Float32Type::mask_get(mask, idx)
-    }
-
-    fn mask_set(mask: Self::SimdMask, idx: usize, value: bool) -> Self::SimdMask {
-        Float32Type::mask_set(mask, idx, value)
-    }
-
-    fn mask_select(mask: Self::SimdMask, a: Self::Simd, b: Self::Simd) -> Self::Simd {
-        Float32Type::mask_select(mask, a, b)
-    }
-
-    fn mask_any(mask: Self::SimdMask) -> bool {
-        Float32Type::mask_any(mask)
-    }
-
-    fn bin_op<F: Fn(Self::Simd, Self::Simd) -> Self::Simd>(
-        left: Self::Simd,
-        right: Self::Simd,
+    /// Performs a SIMD unary operation on signed numeric type
+    fn signed_unary_op<F: Fn(Self::SignedSimd) -> Self::SignedSimd>(
+        a: Self::SignedSimd,
         op: F,
-    ) -> Self::Simd {
-        op(left, right)
-    }
+    ) -> Self::SignedSimd;
 
-    fn eq(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        Float32Type::eq(left, right)
-    }
-
-    fn ne(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        Float32Type::ne(left, right)
-    }
-
-    fn lt(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        Float32Type::lt(left, right)
-    }
-
-    fn le(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        Float32Type::le(left, right)
-    }
-
-    fn gt(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        Float32Type::gt(left, right)
-    }
-
-    fn ge(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        Float32Type::ge(left, right)
-    }
-
-    fn write(simd_result: Self::Simd, slice: &mut [Self::Native]) {
-        let mut s = [0_f32; Self::Simd::lanes()];
-        Float32Type::write(simd_result, &mut s);
-        slice
-            .iter_mut()
-            .zip(s)
-            .for_each(|(o, i)| *o = half::f16::from_f32(i))
-    }
-
-    fn unary_op<F: Fn(Self::Simd) -> Self::Simd>(a: Self::Simd, op: F) -> Self::Simd {
-        Float32Type::unary_op(a, op)
-    }
+    /// Writes a signed SIMD result back to a slice
+    fn write_signed(simd_result: Self::SignedSimd, slice: &mut [Self::Native]);
 }
 
 #[cfg(not(feature = "simd"))]
-impl ArrowNumericType for Decimal256Type {}
+pub trait ArrowSignedNumericType: ArrowNumericType
+where
+    Self::Native: std::ops::Neg<Output = Self::Native>,
+{
+}
 
-#[cfg(feature = "simd")]
-impl ArrowNumericType for Decimal256Type {
-    type Simd = i256;
-    type SimdMask = bool;
+macro_rules! make_signed_numeric_type {
+    ($impl_ty:ty, $simd_ty:ident) => {
+        #[cfg(feature = "simd")]
+        impl ArrowSignedNumericType for $impl_ty {
+            type SignedSimd = $simd_ty;
 
-    fn lanes() -> usize {
-        1
-    }
+            #[inline]
+            fn load_signed(slice: &[Self::Native]) -> Self::SignedSimd {
+                unsafe { Self::SignedSimd::from_slice_unaligned_unchecked(slice) }
+            }
 
-    fn init(value: Self::Native) -> Self::Simd {
-        value
-    }
+            #[inline]
+            fn signed_unary_op<F: Fn(Self::SignedSimd) -> Self::SignedSimd>(
+                a: Self::SignedSimd,
+                op: F,
+            ) -> Self::SignedSimd {
+                op(a)
+            }
 
-    fn load(slice: &[Self::Native]) -> Self::Simd {
-        slice[0]
-    }
-
-    fn mask_init(value: bool) -> Self::SimdMask {
-        value
-    }
-
-    fn mask_from_u64(mask: u64) -> Self::SimdMask {
-        mask != 0
-    }
-
-    fn mask_to_u64(mask: &Self::SimdMask) -> u64 {
-        *mask as u64
-    }
-
-    fn mask_get(mask: &Self::SimdMask, _idx: usize) -> bool {
-        *mask
-    }
-
-    fn mask_set(_mask: Self::SimdMask, _idx: usize, value: bool) -> Self::SimdMask {
-        value
-    }
-
-    fn mask_select(mask: Self::SimdMask, a: Self::Simd, b: Self::Simd) -> Self::Simd {
-        match mask {
-            true => a,
-            false => b,
+            #[inline]
+            fn write_signed(simd_result: Self::SignedSimd, slice: &mut [Self::Native]) {
+                unsafe { simd_result.write_to_slice_unaligned_unchecked(slice) };
+            }
         }
-    }
 
-    fn mask_any(mask: Self::SimdMask) -> bool {
-        mask
-    }
-
-    fn bin_op<F: Fn(Self::Simd, Self::Simd) -> Self::Simd>(
-        left: Self::Simd,
-        right: Self::Simd,
-        op: F,
-    ) -> Self::Simd {
-        op(left, right)
-    }
-
-    fn eq(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        left.eq(&right)
-    }
-
-    fn ne(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        left.ne(&right)
-    }
-
-    fn lt(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        left.lt(&right)
-    }
-
-    fn le(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        left.le(&right)
-    }
-
-    fn gt(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        left.gt(&right)
-    }
-
-    fn ge(left: Self::Simd, right: Self::Simd) -> Self::SimdMask {
-        left.ge(&right)
-    }
-
-    fn write(simd_result: Self::Simd, slice: &mut [Self::Native]) {
-        slice[0] = simd_result
-    }
-
-    fn unary_op<F: Fn(Self::Simd) -> Self::Simd>(a: Self::Simd, op: F) -> Self::Simd {
-        op(a)
-    }
+        #[cfg(not(feature = "simd"))]
+        impl ArrowSignedNumericType for $impl_ty {}
+    };
 }
+
+make_signed_numeric_type!(Int8Type, i8x64);
+make_signed_numeric_type!(Int16Type, i16x32);
+make_signed_numeric_type!(Int32Type, i32x16);
+make_signed_numeric_type!(Int64Type, i64x8);
+make_signed_numeric_type!(Float32Type, f32x16);
+make_signed_numeric_type!(Float64Type, f64x8);
 
 #[cfg(feature = "simd")]
 pub trait ArrowFloatNumericType: ArrowNumericType {
@@ -581,11 +447,11 @@ macro_rules! make_float_numeric_type {
 make_float_numeric_type!(Float32Type, f32x16);
 make_float_numeric_type!(Float64Type, f64x8);
 
-#[cfg(all(test, feature = "simd"))]
+#[cfg(all(test, simd_x86))]
 mod tests {
     use crate::datatypes::{
         ArrowNumericType, Float32Type, Float64Type, Int32Type, Int64Type, Int8Type,
-        IntervalMonthDayNanoType, UInt16Type,
+        UInt16Type,
     };
     use packed_simd::*;
     use FromCast;
@@ -601,17 +467,6 @@ mod tests {
                 .map(|i| (if (mask & (1 << i)) != 0 { -1 } else { 0 }))
                 .collect::<Vec<$T>>()
         }};
-    }
-
-    #[test]
-    fn test_mask_i128() {
-        let mask = 0b1101;
-        let actual = IntervalMonthDayNanoType::mask_from_u64(mask);
-        let expected = expected_mask!(i128, mask);
-        let expected =
-            m128x4::from_cast(i128x4::from_slice_unaligned(expected.as_slice()));
-
-        assert_eq!(expected, actual);
     }
 
     #[test]

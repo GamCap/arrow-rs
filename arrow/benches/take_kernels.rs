@@ -30,13 +30,13 @@ use arrow::{array::*, util::bench_util::*};
 
 fn create_random_index(size: usize, null_density: f32) -> UInt32Array {
     let mut rng = seedable_rng();
-    let mut builder = UInt32Builder::with_capacity(size);
+    let mut builder = UInt32Builder::new(size);
     for _ in 0..size {
         if rng.gen::<f32>() < null_density {
-            builder.append_null();
+            builder.append_null().unwrap()
         } else {
             let value = rng.gen_range::<u32, _>(0u32..size as u32);
-            builder.append_value(value);
+            builder.append_value(value).unwrap();
         }
     }
     builder.finish()

@@ -20,18 +20,19 @@
 pub mod aggregate;
 pub mod arithmetic;
 pub mod arity;
-pub mod bitwise;
 pub mod boolean;
+pub mod cast;
+pub mod cast_utils;
 pub mod comparison;
-pub mod concat_elements;
+pub mod concat;
+pub mod filter;
 pub mod length;
 pub mod limit;
 pub mod partition;
 pub mod regexp;
 pub mod sort;
 pub mod substring;
+pub mod take;
 pub mod temporal;
-
-pub use arrow_cast::cast;
-pub use arrow_cast::parse as cast_utils;
-pub use arrow_select::{concat, filter, interleave, take, window, zip};
+pub mod window;
+pub mod zip;

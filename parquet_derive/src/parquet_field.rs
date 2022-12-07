@@ -68,7 +68,7 @@ impl Field {
     ///
     /// struct Record {
     ///   a_bool: bool,
-    ///   maybe_a_bool: `Option<bool>`
+    ///   maybe_a_bool: Option<bool>
     /// }
     ///
     /// but not
@@ -147,7 +147,7 @@ impl Field {
         // this expression just switches between non-nullable and nullable write statements
         let write_batch_expr = if definition_levels.is_some() {
             quote! {
-                if let #column_writer(ref mut typed) = column_writer.untyped() {
+                if let #column_writer(ref mut typed) = column_writer {
                     typed.write_batch(&vals[..], Some(&definition_levels[..]), None)?;
                 } else {
                     panic!("Schema and struct disagree on type for {}", stringify!{#ident})
@@ -155,7 +155,7 @@ impl Field {
             }
         } else {
             quote! {
-                if let #column_writer(ref mut typed) = column_writer.untyped() {
+                if let #column_writer(ref mut typed) = column_writer {
                     typed.write_batch(&vals[..], None, None)?;
                 } else {
                     panic!("Schema and struct disagree on type for {}", stringify!{#ident})
@@ -181,28 +181,28 @@ impl Field {
         let field_name = &self.ident.to_string();
         let physical_type = match self.ty.physical_type() {
             parquet::basic::Type::BOOLEAN => quote! {
-                ::parquet::basic::Type::BOOLEAN
+                parquet::basic::Type::BOOLEAN
             },
             parquet::basic::Type::INT32 => quote! {
-                ::parquet::basic::Type::INT32
+                parquet::basic::Type::INT32
             },
             parquet::basic::Type::INT64 => quote! {
-                ::parquet::basic::Type::INT64
+                parquet::basic::Type::INT64
             },
             parquet::basic::Type::INT96 => quote! {
-                ::parquet::basic::Type::INT96
+                parquet::basic::Type::INT96
             },
             parquet::basic::Type::FLOAT => quote! {
-                ::parquet::basic::Type::FLOAT
+                parquet::basic::Type::FLOAT
             },
             parquet::basic::Type::DOUBLE => quote! {
-                ::parquet::basic::Type::DOUBLE
+                parquet::basic::Type::DOUBLE
             },
             parquet::basic::Type::BYTE_ARRAY => quote! {
-                ::parquet::basic::Type::BYTE_ARRAY
+                parquet::basic::Type::BYTE_ARRAY
             },
             parquet::basic::Type::FIXED_LEN_BYTE_ARRAY => quote! {
-                ::parquet::basic::Type::FIXED_LEN_BYTE_ARRAY
+                parquet::basic::Type::FIXED_LEN_BYTE_ARRAY
             },
         };
         let logical_type = self.ty.logical_type();
@@ -250,7 +250,7 @@ impl Field {
         let some = if is_a_timestamp {
             quote! { Some(inner.timestamp_millis()) }
         } else if is_a_date {
-            quote! { Some(inner.signed_duration_since(::chrono::NaiveDate::from_ymd(1970, 1, 1)).num_days() as i32)  }
+            quote! { Some(inner.signed_duration_since(chrono::NaiveDate::from_ymd(1970, 1, 1)).num_days() as i32)  }
         } else if is_a_uuid {
             quote! { Some((&inner.to_string()[..]).into()) }
         } else if is_a_byte_buf {
@@ -286,7 +286,7 @@ impl Field {
         let access = if is_a_timestamp {
             quote! { rec.#field_name.timestamp_millis() }
         } else if is_a_date {
-            quote! { rec.#field_name.signed_duration_since(::chrono::NaiveDate::from_ymd(1970, 1, 1)).num_days() as i32 }
+            quote! { rec.#field_name.signed_duration_since(chrono::NaiveDate::from_ymd(1970, 1, 1)).num_days() as i32 }
         } else if is_a_uuid {
             quote! { (&rec.#field_name.to_string()[..]).into() }
         } else if is_a_byte_buf {
@@ -336,46 +336,57 @@ impl Type {
 
         match self.physical_type() {
             BasicType::BOOLEAN => {
-                syn::parse_quote!(ColumnWriter::BoolColumnWriter)
+                syn::parse_quote!(parquet::column::writer::ColumnWriter::BoolColumnWriter)
             }
-            BasicType::INT32 => syn::parse_quote!(ColumnWriter::Int32ColumnWriter),
-            BasicType::INT64 => syn::parse_quote!(ColumnWriter::Int64ColumnWriter),
-            BasicType::INT96 => syn::parse_quote!(ColumnWriter::Int96ColumnWriter),
-            BasicType::FLOAT => syn::parse_quote!(ColumnWriter::FloatColumnWriter),
-            BasicType::DOUBLE => syn::parse_quote!(ColumnWriter::DoubleColumnWriter),
-            BasicType::BYTE_ARRAY => {
-                syn::parse_quote!(ColumnWriter::ByteArrayColumnWriter)
-            }
-            BasicType::FIXED_LEN_BYTE_ARRAY => {
-                syn::parse_quote!(ColumnWriter::FixedLenByteArrayColumnWriter)
-            }
+            BasicType::INT32 => syn::parse_quote!(
+                parquet::column::writer::ColumnWriter::Int32ColumnWriter
+            ),
+            BasicType::INT64 => syn::parse_quote!(
+                parquet::column::writer::ColumnWriter::Int64ColumnWriter
+            ),
+            BasicType::INT96 => syn::parse_quote!(
+                parquet::column::writer::ColumnWriter::Int96ColumnWriter
+            ),
+            BasicType::FLOAT => syn::parse_quote!(
+                parquet::column::writer::ColumnWriter::FloatColumnWriter
+            ),
+            BasicType::DOUBLE => syn::parse_quote!(
+                parquet::column::writer::ColumnWriter::DoubleColumnWriter
+            ),
+            BasicType::BYTE_ARRAY => syn::parse_quote!(
+                parquet::column::writer::ColumnWriter::ByteArrayColumnWriter
+            ),
+            BasicType::FIXED_LEN_BYTE_ARRAY => syn::parse_quote!(
+                parquet::column::writer::ColumnWriter::FixedLenByteArrayColumnWriter
+            ),
         }
     }
 
     /// Helper to simplify a nested field definition to its leaf type
     ///
     /// Ex:
-    ///   `Option<&String>` => Type::TypePath(String)
-    ///   `&Option<i32>` => Type::TypePath(i32)
-    ///   `Vec<Vec<u8>>` => Type::Vec(u8)
+    ///   Option<&String> => Type::TypePath(String)
+    ///   &Option<i32> => Type::TypePath(i32)
+    ///   Vec<Vec<u8>> => Type::Vec(u8)
     ///
     /// Useful in determining the physical type of a field and the
     /// definition levels.
     fn leaf_type_recursive(&self) -> &Type {
-        Type::leaf_type_recursive_helper(self, None)
+        self.leaf_type_recursive_helper(self, None)
     }
 
     fn leaf_type_recursive_helper<'a>(
+        &'a self,
         ty: &'a Type,
         parent_ty: Option<&'a Type>,
-    ) -> &'a Type {
+    ) -> &Type {
         match ty {
             Type::TypePath(_) => parent_ty.unwrap_or(ty),
             Type::Option(ref first_type)
             | Type::Vec(ref first_type)
             | Type::Array(ref first_type)
             | Type::Reference(_, ref first_type) => {
-                Type::leaf_type_recursive_helper(first_type, Some(ty))
+                self.leaf_type_recursive_helper(first_type, Some(ty))
             }
         }
     }
@@ -403,7 +414,7 @@ impl Type {
     ///
     /// Ex:
     ///   std::string::String => String
-    ///   `Vec<u8>` => `Vec<u8>`
+    ///   Vec<u8> => Vec<u8>
     ///   chrono::NaiveDateTime => NaiveDateTime
     ///
     /// Does run the risk of mis-identifying a type if import
@@ -426,7 +437,7 @@ impl Type {
     ///
     /// Ex:
     ///   [u8; 10] => FIXED_LEN_BYTE_ARRAY
-    ///   `Vec<u8>`  => BYTE_ARRAY
+    ///   Vec<u8>  => BYTE_ARRAY
     ///   String => BYTE_ARRAY
     ///   i32 => INT32
     fn physical_type(&self) -> parquet::basic::Type {
@@ -496,48 +507,48 @@ impl Type {
 
         match last_part.trim() {
             "bool" => quote! { None },
-            "u8" => quote! { Some(LogicalType::Integer {
+            "u8" => quote! { Some(LogicalType::INTEGER(IntType {
                 bit_width: 8,
                 is_signed: false,
-            }) },
-            "u16" => quote! { Some(LogicalType::Integer {
+            })) },
+            "u16" => quote! { Some(LogicalType::INTEGER(IntType {
                 bit_width: 16,
                 is_signed: false,
-            }) },
-            "u32" => quote! { Some(LogicalType::Integer {
+            })) },
+            "u32" => quote! { Some(LogicalType::INTEGER(IntType {
                 bit_width: 32,
                 is_signed: false,
-            }) },
-            "u64" => quote! { Some(LogicalType::Integer {
+            })) },
+            "u64" => quote! { Some(LogicalType::INTEGER(IntType {
                 bit_width: 64,
                 is_signed: false,
-            }) },
-            "i8" => quote! { Some(LogicalType::Integer {
+            })) },
+            "i8" => quote! { Some(LogicalType::INTEGER(IntType {
                 bit_width: 8,
                 is_signed: true,
-            }) },
-            "i16" => quote! { Some(LogicalType::Integer {
+            })) },
+            "i16" => quote! { Some(LogicalType::INTEGER(IntType {
                 bit_width: 16,
                 is_signed: true,
-            }) },
+            })) },
             "i32" | "i64" => quote! { None },
             "usize" => {
-                quote! { Some(LogicalType::Integer {
+                quote! { Some(LogicalType::INTEGER(IntType {
                     bit_width: usize::BITS as i8,
                     is_signed: false
-                }) }
+                })) }
             }
             "isize" => {
-                quote! { Some(LogicalType::Integer {
+                quote! { Some(LogicalType::INTEGER(IntType {
                     bit_width: usize::BITS as i8,
                     is_signed: true
-                }) }
+                })) }
             }
-            "NaiveDate" => quote! { Some(LogicalType::Date) },
+            "NaiveDate" => quote! { Some(LogicalType::DATE(Default::default())) },
             "NaiveDateTime" => quote! { None },
             "f32" | "f64" => quote! { None },
-            "String" | "str" => quote! { Some(LogicalType::String) },
-            "Uuid" => quote! { Some(LogicalType::Uuid) },
+            "String" | "str" => quote! { Some(LogicalType::STRING(Default::default())) },
+            "Uuid" => quote! { Some(LogicalType::UUID(Default::default())) },
             f => unimplemented!("{} currently is not supported", f),
         }
     }
@@ -546,18 +557,16 @@ impl Type {
         let last_part = self.last_part();
 
         match last_part.trim() {
-            "NaiveDateTime" => {
-                Some(quote! { ::parquet::basic::ConvertedType::TIMESTAMP_MILLIS })
-            }
+            "NaiveDateTime" => Some(quote! { ConvertedType::TIMESTAMP_MILLIS }),
             _ => None,
         }
     }
 
     fn repetition(&self) -> proc_macro2::TokenStream {
-        match self {
-            Type::Option(_) => quote! { ::parquet::basic::Repetition::OPTIONAL },
+        match &self {
+            Type::Option(_) => quote! { Repetition::OPTIONAL },
             Type::Reference(_, ty) => ty.repetition(),
-            _ => quote! { ::parquet::basic::Repetition::REQUIRED },
+            _ => quote! { Repetition::REQUIRED },
         }
     }
 
@@ -657,7 +666,7 @@ mod test {
                         {
                             let vals : Vec < _ > = records . iter ( ) . map ( | rec | rec . counter as i64 ) . collect ( );
 
-                            if let ColumnWriter::Int64ColumnWriter ( ref mut typed ) = column_writer.untyped() {
+                            if let parquet::column::writer::ColumnWriter::Int64ColumnWriter ( ref mut typed ) = column_writer {
                                 typed . write_batch ( & vals [ .. ] , None , None ) ?;
                             }  else {
                                 panic!("Schema and struct disagree on type for {}" , stringify!{ counter } )
@@ -672,8 +681,8 @@ mod test {
         let struct_def: proc_macro2::TokenStream = quote! {
           struct StringBorrower<'a> {
             optional_str: Option<&'a str>,
-            optional_string: Option<&String>,
-            optional_dumb_int: Option<&i32>,
+            optional_string: &Option<String>,
+            optional_dumb_int: &Option<&i32>,
           }
         };
 
@@ -694,7 +703,7 @@ mod test {
                     }
                 }).collect();
 
-                if let ColumnWriter::ByteArrayColumnWriter ( ref mut typed ) = column_writer.untyped() {
+                if let parquet::column::writer::ColumnWriter::ByteArrayColumnWriter ( ref mut typed ) = column_writer {
                     typed . write_batch ( & vals [ .. ] , Some(&definition_levels[..]) , None ) ? ;
                 } else {
                     panic!("Schema and struct disagree on type for {}" , stringify ! { optional_str } )
@@ -718,7 +727,7 @@ mod test {
                             }
                         }).collect();
 
-                        if let ColumnWriter::ByteArrayColumnWriter ( ref mut typed ) = column_writer.untyped() {
+                        if let parquet::column::writer::ColumnWriter::ByteArrayColumnWriter ( ref mut typed ) = column_writer {
                             typed . write_batch ( & vals [ .. ] , Some(&definition_levels[..]) , None ) ? ;
                         } else {
                             panic!("Schema and struct disagree on type for {}" , stringify ! { optional_string } )
@@ -741,7 +750,7 @@ mod test {
                             }
                         }).collect();
 
-                        if let ColumnWriter::Int32ColumnWriter ( ref mut typed ) = column_writer.untyped() {
+                        if let parquet::column::writer::ColumnWriter::Int32ColumnWriter ( ref mut typed ) = column_writer {
                             typed . write_batch ( & vals [ .. ] , Some(&definition_levels[..]) , None ) ? ;
                         }  else {
                             panic!("Schema and struct disagree on type for {}" , stringify ! { optional_dumb_int } )
@@ -770,8 +779,12 @@ mod test {
         assert_eq!(
             column_writers,
             vec![
-                syn::parse_quote!(ColumnWriter::BoolColumnWriter),
-                syn::parse_quote!(ColumnWriter::ByteArrayColumnWriter)
+                syn::parse_quote!(
+                    parquet::column::writer::ColumnWriter::BoolColumnWriter
+                ),
+                syn::parse_quote!(
+                    parquet::column::writer::ColumnWriter::ByteArrayColumnWriter
+                )
             ]
         );
     }
@@ -820,9 +833,9 @@ mod test {
         let snippet: proc_macro2::TokenStream = quote! {
           struct LotsOfInnerTypes {
             a_vec: Vec<u8>,
-            a_option: ::std::option::Option<bool>,
-            a_silly_string: ::std::string::String,
-            a_complicated_thing: ::std::option::Option<::std::result::Result<(),()>>,
+            a_option: std::option::Option<bool>,
+            a_silly_string: std::string::String,
+            a_complicated_thing: std::option::Option<std::result::Result<(),()>>,
           }
         };
 
@@ -842,8 +855,8 @@ mod test {
             vec![
                 "u8",
                 "bool",
-                ":: std :: string :: String",
-                ":: std :: result :: Result < () , () >"
+                "std :: string :: String",
+                "std :: result :: Result < () , () >"
             ]
         )
     }
@@ -853,13 +866,13 @@ mod test {
         use parquet::basic::Type as BasicType;
         let snippet: proc_macro2::TokenStream = quote! {
           struct LotsOfInnerTypes {
-            a_buf: ::std::vec::Vec<u8>,
+            a_buf: Vec<u8>,
             a_number: i32,
-            a_verbose_option: ::std::option::Option<bool>,
-            a_silly_string: String,
+            a_verbose_option: std::option::Option<bool>,
+            a_silly_string: std::string::String,
             a_fix_byte_buf: [u8; 10],
-            a_complex_option: ::std::option::Option<&Vec<u8>>,
-            a_complex_vec: &::std::vec::Vec<&Option<u8>>,
+            a_complex_option: Option<&Vec<u8>>,
+            a_complex_vec: &Vec<&Option<u8>>,
           }
         };
 
@@ -888,10 +901,10 @@ mod test {
     fn test_convert_comprehensive_owned_struct() {
         let snippet: proc_macro2::TokenStream = quote! {
           struct VecHolder {
-            a_vec: ::std::vec::Vec<u8>,
-            a_option: ::std::option::Option<bool>,
-            a_silly_string: ::std::string::String,
-            a_complicated_thing: ::std::option::Option<::std::result::Result<(),()>>,
+            a_vec: Vec<u8>,
+            a_option: std::option::Option<bool>,
+            a_silly_string: std::string::String,
+            a_complicated_thing: std::option::Option<std::result::Result<(),()>>,
           }
         };
 
@@ -903,9 +916,9 @@ mod test {
             vec![
                 Type::Vec(Box::new(Type::TypePath(syn::parse_quote!(u8)))),
                 Type::Option(Box::new(Type::TypePath(syn::parse_quote!(bool)))),
-                Type::TypePath(syn::parse_quote!(::std::string::String)),
+                Type::TypePath(syn::parse_quote!(std::string::String)),
                 Type::Option(Box::new(Type::TypePath(
-                    syn::parse_quote!(::std::result::Result<(),()>)
+                    syn::parse_quote!(std::result::Result<(),()>)
                 ))),
             ]
         );
@@ -962,7 +975,7 @@ mod test {
         assert_eq!(when.writer_snippet().to_string(),(quote!{
             {
                 let vals : Vec<_> = records.iter().map(|rec| rec.henceforth.timestamp_millis() ).collect();
-                if let ColumnWriter::Int64ColumnWriter(ref mut typed) = column_writer.untyped() {
+                if let parquet::column::writer::ColumnWriter::Int64ColumnWriter(ref mut typed) = column_writer {
                     typed.write_batch(&vals[..], None, None) ?;
                 } else {
                     panic!("Schema and struct disagree on type for {}" , stringify!{ henceforth })
@@ -982,7 +995,7 @@ mod test {
                     }
                 }).collect();
 
-                if let ColumnWriter::Int64ColumnWriter(ref mut typed) = column_writer.untyped() {
+                if let parquet::column::writer::ColumnWriter::Int64ColumnWriter(ref mut typed) = column_writer {
                     typed.write_batch(&vals[..], Some(&definition_levels[..]), None) ?;
                 } else {
                     panic!("Schema and struct disagree on type for {}" , stringify!{ maybe_happened })
@@ -1004,8 +1017,8 @@ mod test {
         let when = Field::from(&fields[0]);
         assert_eq!(when.writer_snippet().to_string(),(quote!{
             {
-                let vals : Vec<_> = records.iter().map(|rec| rec.henceforth.signed_duration_since(::chrono::NaiveDate::from_ymd(1970, 1, 1)).num_days() as i32).collect();
-                if let ColumnWriter::Int32ColumnWriter(ref mut typed) = column_writer.untyped() {
+                let vals : Vec<_> = records.iter().map(|rec| rec.henceforth.signed_duration_since(chrono::NaiveDate::from_ymd(1970, 1, 1)).num_days() as i32).collect();
+                if let parquet::column::writer::ColumnWriter::Int32ColumnWriter(ref mut typed) = column_writer {
                     typed.write_batch(&vals[..], None, None) ?;
                 } else {
                     panic!("Schema and struct disagree on type for {}" , stringify!{ henceforth })
@@ -1019,13 +1032,13 @@ mod test {
                 let definition_levels : Vec<i16> = self.iter().map(|rec| if rec.maybe_happened.is_some() { 1 } else { 0 }).collect();
                 let vals : Vec<_> = records.iter().filter_map(|rec| {
                     if let Some(inner) = rec.maybe_happened {
-                        Some(inner.signed_duration_since(::chrono::NaiveDate::from_ymd(1970, 1, 1)).num_days() as i32)
+                        Some(inner.signed_duration_since(chrono::NaiveDate::from_ymd(1970, 1, 1)).num_days() as i32)
                     } else {
                         None
                     }
                 }).collect();
 
-                if let ColumnWriter::Int32ColumnWriter(ref mut typed) = column_writer.untyped() {
+                if let parquet::column::writer::ColumnWriter::Int32ColumnWriter(ref mut typed) = column_writer {
                     typed.write_batch(&vals[..], Some(&definition_levels[..]), None) ?;
                 } else {
                     panic!("Schema and struct disagree on type for {}" , stringify!{ maybe_happened })
@@ -1048,7 +1061,7 @@ mod test {
         assert_eq!(when.writer_snippet().to_string(),(quote!{
             {
                 let vals : Vec<_> = records.iter().map(|rec| (&rec.unique_id.to_string()[..]).into() ).collect();
-                if let ColumnWriter::ByteArrayColumnWriter(ref mut typed) = column_writer.untyped() {
+                if let parquet::column::writer::ColumnWriter::ByteArrayColumnWriter(ref mut typed) = column_writer {
                     typed.write_batch(&vals[..], None, None) ?;
                 } else {
                     panic!("Schema and struct disagree on type for {}" , stringify!{ unique_id })
@@ -1068,7 +1081,7 @@ mod test {
                     }
                 }).collect();
 
-                if let ColumnWriter::ByteArrayColumnWriter(ref mut typed) = column_writer.untyped() {
+                if let parquet::column::writer::ColumnWriter::ByteArrayColumnWriter(ref mut typed) = column_writer {
                     typed.write_batch(&vals[..], Some(&definition_levels[..]), None) ?;
                 } else {
                     panic!("Schema and struct disagree on type for {}" , stringify!{ maybe_unique_id })
@@ -1092,7 +1105,7 @@ mod test {
         let converted_type = time.ty.converted_type();
         assert_eq!(
             converted_type.unwrap().to_string(),
-            quote! { ::parquet::basic::ConvertedType::TIMESTAMP_MILLIS }.to_string()
+            quote! { ConvertedType::TIMESTAMP_MILLIS }.to_string()
         );
     }
 }

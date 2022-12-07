@@ -53,14 +53,6 @@ import_gpg_keys() {
   gpg --import KEYS
 }
 
-if type shasum >/dev/null 2>&1; then
-  sha256_verify="shasum -a 256 -c"
-  sha512_verify="shasum -a 512 -c"
-else
-  sha256_verify="sha256sum -c"
-  sha512_verify="sha512sum -c"
-fi
-
 fetch_archive() {
   local dist_name=$1
   download_rc_file ${dist_name}.tar.gz
@@ -68,8 +60,26 @@ fetch_archive() {
   download_rc_file ${dist_name}.tar.gz.sha256
   download_rc_file ${dist_name}.tar.gz.sha512
   gpg --verify ${dist_name}.tar.gz.asc ${dist_name}.tar.gz
-  ${sha256_verify} ${dist_name}.tar.gz.sha256
-  ${sha512_verify} ${dist_name}.tar.gz.sha512
+  shasum -a 256 -c ${dist_name}.tar.gz.sha256
+  shasum -a 512 -c ${dist_name}.tar.gz.sha512
+}
+
+verify_dir_artifact_signatures() {
+  # verify the signature and the checksums of each artifact
+  find $1 -name '*.asc' | while read sigfile; do
+    artifact=${sigfile/.asc/}
+    gpg --verify $sigfile $artifact || exit 1
+
+    # go into the directory because the checksum files contain only the
+    # basename of the artifact
+    pushd $(dirname $artifact)
+    base_artifact=$(basename $artifact)
+    if [ -f $base_artifact.sha256 ]; then
+      shasum -a 256 -c $base_artifact.sha256 || exit 1
+    fi
+    shasum -a 512 -c $base_artifact.sha512 || exit 1
+    popd
+  done
 }
 
 setup_tempdir() {
@@ -105,10 +115,7 @@ test_source_distribution() {
 
   # raises on any formatting errors
   rustup component add rustfmt --toolchain stable
-  (cd arrow && cargo fmt --check)
-  (cd arrow-flight && cargo fmt --check)
-  (cd parquet && cargo fmt --check)
-  (cd parquet_derive && cargo fmt --check)
+  cargo fmt --all -- --check
 
   # Clone testing repositories if not cloned already
   git clone https://github.com/apache/arrow-testing.git arrow-testing-data
@@ -116,16 +123,19 @@ test_source_distribution() {
   export ARROW_TEST_DATA=$PWD/arrow-testing-data/data
   export PARQUET_TEST_DATA=$PWD/parquet-testing-data/data
 
-  (cd arrow && cargo build && cargo test)
-  (cd arrow-flight && cargo build && cargo test)
-  (cd parquet && cargo build && cargo test)
-  (cd parquet_derive && cargo build && cargo test)
+  # use local modules because we don't publish modules to crates.io yet
+  sed \
+    -i.bak \
+    -E \
+    -e 's/^arrow = "([^"]*)"/arrow = { version = "\1", path = "..\/arrow" }/g' \
+    -e 's/^parquet = "([^"]*)"/parquet = { version = "\1", path = "..\/parquet" }/g' \
+    */Cargo.toml
 
-  # verify that the leaf crates can be published to crates.io
-  # we can't verify crates that depend on others
-  # (because the others haven't yet been published to crates.io)
+  cargo build
+  cargo test --all
 
-  pushd arrow-buffer
+  # verify that the crates can be published to crates.io
+  pushd arrow
     cargo publish --dry-run
   popd
 

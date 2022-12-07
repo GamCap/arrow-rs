@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//! This module demonstrates a minimal usage of Rust's C data interface to pass
+//! This library demonstrates a minimal usage of Rust's C data interface to pass
 //! arrays from and to Python.
 
 use std::convert::{From, TryFrom};
@@ -24,23 +24,22 @@ use std::sync::Arc;
 use pyo3::ffi::Py_uintptr_t;
 use pyo3::import_exception;
 use pyo3::prelude::*;
-use pyo3::types::{PyList, PyTuple};
+use pyo3::types::PyList;
 
-use crate::array::{make_array, Array, ArrayData};
+use crate::array::{make_array, Array, ArrayData, ArrayRef};
 use crate::datatypes::{DataType, Field, Schema};
 use crate::error::ArrowError;
 use crate::ffi;
 use crate::ffi::FFI_ArrowSchema;
-use crate::ffi_stream::{
-    export_reader_into_raw, ArrowArrayStreamReader, FFI_ArrowArrayStream,
-};
 use crate::record_batch::RecordBatch;
 
 import_exception!(pyarrow, ArrowException);
 pub type PyArrowException = ArrowException;
 
-fn to_py_err(err: ArrowError) -> PyErr {
-    PyArrowException::new_err(err.to_string())
+impl From<ArrowError> for PyErr {
+    fn from(err: ArrowError) -> PyErr {
+        PyArrowException::new_err(err.to_string())
+    }
 }
 
 pub trait PyArrowConvert: Sized {
@@ -53,12 +52,12 @@ impl PyArrowConvert for DataType {
         let c_schema = FFI_ArrowSchema::empty();
         let c_schema_ptr = &c_schema as *const FFI_ArrowSchema;
         value.call_method1("_export_to_c", (c_schema_ptr as Py_uintptr_t,))?;
-        let dtype = DataType::try_from(&c_schema).map_err(to_py_err)?;
+        let dtype = DataType::try_from(&c_schema)?;
         Ok(dtype)
     }
 
     fn to_pyarrow(&self, py: Python) -> PyResult<PyObject> {
-        let c_schema = FFI_ArrowSchema::try_from(self).map_err(to_py_err)?;
+        let c_schema = FFI_ArrowSchema::try_from(self)?;
         let c_schema_ptr = &c_schema as *const FFI_ArrowSchema;
         let module = py.import("pyarrow")?;
         let class = module.getattr("DataType")?;
@@ -73,12 +72,12 @@ impl PyArrowConvert for Field {
         let c_schema = FFI_ArrowSchema::empty();
         let c_schema_ptr = &c_schema as *const FFI_ArrowSchema;
         value.call_method1("_export_to_c", (c_schema_ptr as Py_uintptr_t,))?;
-        let field = Field::try_from(&c_schema).map_err(to_py_err)?;
+        let field = Field::try_from(&c_schema)?;
         Ok(field)
     }
 
     fn to_pyarrow(&self, py: Python) -> PyResult<PyObject> {
-        let c_schema = FFI_ArrowSchema::try_from(self).map_err(to_py_err)?;
+        let c_schema = FFI_ArrowSchema::try_from(self)?;
         let c_schema_ptr = &c_schema as *const FFI_ArrowSchema;
         let module = py.import("pyarrow")?;
         let class = module.getattr("Field")?;
@@ -93,12 +92,12 @@ impl PyArrowConvert for Schema {
         let c_schema = FFI_ArrowSchema::empty();
         let c_schema_ptr = &c_schema as *const FFI_ArrowSchema;
         value.call_method1("_export_to_c", (c_schema_ptr as Py_uintptr_t,))?;
-        let schema = Schema::try_from(&c_schema).map_err(to_py_err)?;
+        let schema = Schema::try_from(&c_schema)?;
         Ok(schema)
     }
 
     fn to_pyarrow(&self, py: Python) -> PyResult<PyObject> {
-        let c_schema = FFI_ArrowSchema::try_from(self).map_err(to_py_err)?;
+        let c_schema = FFI_ArrowSchema::try_from(self)?;
         let c_schema_ptr = &c_schema as *const FFI_ArrowSchema;
         let module = py.import("pyarrow")?;
         let class = module.getattr("Schema")?;
@@ -125,17 +124,15 @@ impl PyArrowConvert for ArrayData {
             ),
         )?;
 
-        let ffi_array = unsafe {
-            ffi::ArrowArray::try_from_raw(array_pointer, schema_pointer)
-                .map_err(to_py_err)?
-        };
-        let data = ArrayData::try_from(ffi_array).map_err(to_py_err)?;
+        let ffi_array =
+            unsafe { ffi::ArrowArray::try_from_raw(array_pointer, schema_pointer)? };
+        let data = ArrayData::try_from(ffi_array)?;
 
         Ok(data)
     }
 
     fn to_pyarrow(&self, py: Python) -> PyResult<PyObject> {
-        let array = ffi::ArrowArray::try_from(self.clone()).map_err(to_py_err)?;
+        let array = ffi::ArrowArray::try_from(self.clone())?;
         let (array_pointer, schema_pointer) = ffi::ArrowArray::into_raw(array);
 
         let module = py.import("pyarrow")?;
@@ -151,18 +148,26 @@ impl PyArrowConvert for ArrayData {
     }
 }
 
-impl<T: PyArrowConvert> PyArrowConvert for Vec<T> {
+impl PyArrowConvert for ArrayRef {
     fn from_pyarrow(value: &PyAny) -> PyResult<Self> {
-        let list = value.downcast::<PyList>()?;
-        list.iter().map(|x| T::from_pyarrow(&x)).collect()
+        Ok(make_array(ArrayData::from_pyarrow(value)?))
     }
 
     fn to_pyarrow(&self, py: Python) -> PyResult<PyObject> {
-        let values = self
-            .iter()
-            .map(|v| v.to_pyarrow(py))
-            .collect::<PyResult<Vec<_>>>()?;
-        Ok(values.to_object(py))
+        self.data().to_pyarrow(py)
+    }
+}
+
+impl<T> PyArrowConvert for T
+where
+    T: Array + From<ArrayData>,
+{
+    fn from_pyarrow(value: &PyAny) -> PyResult<Self> {
+        Ok(ArrayData::from_pyarrow(value)?.into())
+    }
+
+    fn to_pyarrow(&self, py: Python) -> PyResult<PyObject> {
+        self.data().to_pyarrow(py)
     }
 }
 
@@ -175,88 +180,52 @@ impl PyArrowConvert for RecordBatch {
         let arrays = value.getattr("columns")?.downcast::<PyList>()?;
         let arrays = arrays
             .iter()
-            .map(|a| Ok(make_array(ArrayData::from_pyarrow(a)?)))
+            .map(ArrayRef::from_pyarrow)
             .collect::<PyResult<_>>()?;
 
-        let batch = RecordBatch::try_new(schema, arrays).map_err(to_py_err)?;
+        let batch = RecordBatch::try_new(schema, arrays)?;
         Ok(batch)
     }
 
     fn to_pyarrow(&self, py: Python) -> PyResult<PyObject> {
         let mut py_arrays = vec![];
+        let mut py_names = vec![];
 
         let schema = self.schema();
+        let fields = schema.fields().iter();
         let columns = self.columns().iter();
 
-        for array in columns {
-            py_arrays.push(array.data().to_pyarrow(py)?);
+        for (array, field) in columns.zip(fields) {
+            py_arrays.push(array.to_pyarrow(py)?);
+            py_names.push(field.name());
         }
-
-        let py_schema = schema.to_pyarrow(py)?;
 
         let module = py.import("pyarrow")?;
         let class = module.getattr("RecordBatch")?;
-        let record = class.call_method1("from_arrays", (py_arrays, py_schema))?;
+        let record = class.call_method1("from_arrays", (py_arrays, py_names))?;
 
         Ok(PyObject::from(record))
     }
 }
 
-impl PyArrowConvert for ArrowArrayStreamReader {
-    fn from_pyarrow(value: &PyAny) -> PyResult<Self> {
-        // prepare a pointer to receive the stream struct
-        let stream = Box::new(FFI_ArrowArrayStream::empty());
-        let stream_ptr = Box::into_raw(stream) as *mut FFI_ArrowArrayStream;
-
-        // make the conversion through PyArrow's private API
-        // this changes the pointer's memory and is thus unsafe.
-        // In particular, `_export_to_c` can go out of bounds
-        let args = PyTuple::new(value.py(), &[stream_ptr as Py_uintptr_t]);
-        value.call_method1("_export_to_c", args)?;
-
-        let stream_reader =
-            unsafe { ArrowArrayStreamReader::from_raw(stream_ptr).unwrap() };
-
-        unsafe {
-            drop(Box::from_raw(stream_ptr));
+macro_rules! add_conversion {
+    ($typ:ty) => {
+        impl<'source> FromPyObject<'source> for $typ {
+            fn extract(value: &'source PyAny) -> PyResult<Self> {
+                Self::from_pyarrow(value)
+            }
         }
 
-        Ok(stream_reader)
-    }
-
-    fn to_pyarrow(&self, py: Python) -> PyResult<PyObject> {
-        let stream = Box::new(FFI_ArrowArrayStream::empty());
-        let stream_ptr = Box::into_raw(stream) as *mut FFI_ArrowArrayStream;
-
-        unsafe { export_reader_into_raw(Box::new(self.clone()), stream_ptr) };
-
-        let module = py.import("pyarrow")?;
-        let class = module.getattr("RecordBatchReader")?;
-        let args = PyTuple::new(py, &[stream_ptr as Py_uintptr_t]);
-        let reader = class.call_method1("_import_from_c", args)?;
-        Ok(PyObject::from(reader))
-    }
+        impl<'a> IntoPy<PyObject> for $typ {
+            fn into_py(self, py: Python) -> PyObject {
+                self.to_pyarrow(py).unwrap()
+            }
+        }
+    };
 }
 
-/// A newtype wrapper around a `T: PyArrowConvert` that implements
-/// [`FromPyObject`] and [`IntoPy`] allowing usage with pyo3 macros
-#[derive(Debug)]
-pub struct PyArrowType<T: PyArrowConvert>(pub T);
-
-impl<'source, T: PyArrowConvert> FromPyObject<'source> for PyArrowType<T> {
-    fn extract(value: &'source PyAny) -> PyResult<Self> {
-        Ok(Self(T::from_pyarrow(value)?))
-    }
-}
-
-impl<'a, T: PyArrowConvert> IntoPy<PyObject> for PyArrowType<T> {
-    fn into_py(self, py: Python) -> PyObject {
-        self.0.to_pyarrow(py).unwrap()
-    }
-}
-
-impl<T: PyArrowConvert> From<T> for PyArrowType<T> {
-    fn from(s: T) -> Self {
-        Self(s)
-    }
-}
+add_conversion!(DataType);
+add_conversion!(Field);
+add_conversion!(Schema);
+add_conversion!(ArrayData);
+add_conversion!(RecordBatch);

@@ -26,7 +26,6 @@ use rand::distributions::Standard;
 
 use arrow::array::*;
 use arrow::util::test_util::seedable_rng;
-use arrow_buffer::i256;
 use rand::Rng;
 
 // Build arrays with 512k elements.
@@ -42,9 +41,9 @@ fn bench_primitive(c: &mut Criterion) {
     ));
     group.bench_function("bench_primitive", |b| {
         b.iter(|| {
-            let mut builder = Int64Builder::with_capacity(64);
+            let mut builder = Int64Builder::new(64);
             for _ in 0..NUM_BATCHES {
-                builder.append_slice(&data[..]);
+                let _ = black_box(builder.append_slice(&data[..]));
             }
             black_box(builder.finish());
         })
@@ -56,9 +55,9 @@ fn bench_primitive_nulls(c: &mut Criterion) {
     let mut group = c.benchmark_group("bench_primitive_nulls");
     group.bench_function("bench_primitive_nulls", |b| {
         b.iter(|| {
-            let mut builder = UInt8Builder::with_capacity(64);
+            let mut builder = UInt8Builder::new(64);
             for _ in 0..NUM_BATCHES * BATCH_SIZE {
-                builder.append_null();
+                let _ = black_box(builder.append_null());
             }
             black_box(builder.finish());
         })
@@ -79,9 +78,9 @@ fn bench_bool(c: &mut Criterion) {
     ));
     group.bench_function("bench_bool", |b| {
         b.iter(|| {
-            let mut builder = BooleanBuilder::with_capacity(64);
+            let mut builder = BooleanBuilder::new(64);
             for _ in 0..NUM_BATCHES {
-                builder.append_slice(&data[..]);
+                let _ = black_box(builder.append_slice(&data[..]));
             }
             black_box(builder.finish());
         })
@@ -97,9 +96,9 @@ fn bench_string(c: &mut Criterion) {
     ));
     group.bench_function("bench_string", |b| {
         b.iter(|| {
-            let mut builder = StringBuilder::new();
+            let mut builder = StringBuilder::new(64);
             for _ in 0..NUM_BATCHES * BATCH_SIZE {
-                builder.append_value(SAMPLE_STRING);
+                let _ = black_box(builder.append_value(SAMPLE_STRING));
             }
             black_box(builder.finish());
         })
@@ -107,51 +106,11 @@ fn bench_string(c: &mut Criterion) {
     group.finish();
 }
 
-fn bench_decimal128(c: &mut Criterion) {
-    c.bench_function("bench_decimal128_builder", |b| {
-        b.iter(|| {
-            let mut rng = rand::thread_rng();
-            let mut decimal_builder = Decimal128Builder::with_capacity(BATCH_SIZE);
-            for _ in 0..BATCH_SIZE {
-                decimal_builder.append_value(rng.gen_range::<i128, _>(0..9999999999));
-            }
-            black_box(
-                decimal_builder
-                    .finish()
-                    .with_precision_and_scale(38, 0)
-                    .unwrap(),
-            );
-        })
-    });
-}
-
-fn bench_decimal256(c: &mut Criterion) {
-    c.bench_function("bench_decimal128_builder", |b| {
-        b.iter(|| {
-            let mut rng = rand::thread_rng();
-            let mut decimal_builder = Decimal256Builder::with_capacity(BATCH_SIZE);
-            for _ in 0..BATCH_SIZE {
-                decimal_builder.append_value(i256::from_i128(
-                    rng.gen_range::<i128, _>(0..99999999999),
-                ));
-            }
-            black_box(
-                decimal_builder
-                    .finish()
-                    .with_precision_and_scale(76, 10)
-                    .unwrap(),
-            );
-        })
-    });
-}
-
 criterion_group!(
     benches,
     bench_primitive,
     bench_primitive_nulls,
     bench_bool,
-    bench_string,
-    bench_decimal128,
-    bench_decimal256,
+    bench_string
 );
 criterion_main!(benches);

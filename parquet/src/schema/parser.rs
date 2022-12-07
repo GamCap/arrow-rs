@@ -45,7 +45,8 @@
 use std::sync::Arc;
 
 use crate::basic::{
-    ConvertedType, LogicalType, Repetition, TimeUnit, Type as PhysicalType,
+    ConvertedType, DecimalType, IntType, LogicalType, Repetition, TimeType, TimeUnit,
+    TimestampType, Type as PhysicalType,
 };
 use crate::errors::{ParquetError, Result};
 use crate::schema::types::{Type, TypePtr};
@@ -356,7 +357,7 @@ impl<'a> Parser<'a> {
             // Parse the concrete logical type
             if let Some(tpe) = &logical {
                 match tpe {
-                    LogicalType::Decimal { .. } => {
+                    LogicalType::DECIMAL(_) => {
                         if let Some("(") = self.tokenizer.next() {
                             precision = parse_i32(
                                 self.tokenizer.next(),
@@ -373,11 +374,14 @@ impl<'a> Parser<'a> {
                             } else {
                                 scale = 0
                             }
-                            logical = Some(LogicalType::Decimal { scale, precision });
+                            logical = Some(LogicalType::DECIMAL(DecimalType {
+                                scale,
+                                precision,
+                            }));
                             converted = ConvertedType::from(logical.clone());
                         }
                     }
-                    LogicalType::Time { .. } => {
+                    LogicalType::TIME(_) => {
                         if let Some("(") = self.tokenizer.next() {
                             let unit = parse_timeunit(
                                 self.tokenizer.next(),
@@ -391,10 +395,10 @@ impl<'a> Parser<'a> {
                                     "Failed to parse timezone info for TIME type",
                                 )?;
                                 assert_token(self.tokenizer.next(), ")")?;
-                                logical = Some(LogicalType::Time {
+                                logical = Some(LogicalType::TIME(TimeType {
                                     is_adjusted_to_u_t_c,
                                     unit,
-                                });
+                                }));
                                 converted = ConvertedType::from(logical.clone());
                             } else {
                                 // Invalid token for unit
@@ -402,7 +406,7 @@ impl<'a> Parser<'a> {
                             }
                         }
                     }
-                    LogicalType::Timestamp { .. } => {
+                    LogicalType::TIMESTAMP(_) => {
                         if let Some("(") = self.tokenizer.next() {
                             let unit = parse_timeunit(
                                 self.tokenizer.next(),
@@ -416,10 +420,10 @@ impl<'a> Parser<'a> {
                                     "Failed to parse timezone info for TIMESTAMP type",
                                 )?;
                                 assert_token(self.tokenizer.next(), ")")?;
-                                logical = Some(LogicalType::Timestamp {
+                                logical = Some(LogicalType::TIMESTAMP(TimestampType {
                                     is_adjusted_to_u_t_c,
                                     unit,
-                                });
+                                }));
                                 converted = ConvertedType::from(logical.clone());
                             } else {
                                 // Invalid token for unit
@@ -427,7 +431,7 @@ impl<'a> Parser<'a> {
                             }
                         }
                     }
-                    LogicalType::Integer { .. } => {
+                    LogicalType::INTEGER(_) => {
                         if let Some("(") = self.tokenizer.next() {
                             let bit_width = parse_i32(
                                 self.tokenizer.next(),
@@ -449,7 +453,7 @@ impl<'a> Parser<'a> {
                                     }
                                 }
                                 _ => {
-                                    return Err(general_err!("Logical type Integer cannot be used with physical type {}", physical_type))
+                                    return Err(general_err!("Logical type INTEGER cannot be used with physical type {}", physical_type))
                                 }
                             }
                             if let Some(",") = self.tokenizer.next() {
@@ -459,10 +463,10 @@ impl<'a> Parser<'a> {
                                     "Failed to parse is_signed for INTEGER type",
                                 )?;
                                 assert_token(self.tokenizer.next(), ")")?;
-                                logical = Some(LogicalType::Integer {
+                                logical = Some(LogicalType::INTEGER(IntType {
                                     bit_width,
                                     is_signed,
-                                });
+                                }));
                                 converted = ConvertedType::from(logical.clone());
                             } else {
                                 // Invalid token for unit
@@ -921,10 +925,10 @@ mod tests {
                         "f1",
                         PhysicalType::FIXED_LEN_BYTE_ARRAY,
                     )
-                    .with_logical_type(Some(LogicalType::Decimal {
+                    .with_logical_type(Some(LogicalType::DECIMAL(DecimalType {
                         precision: 9,
                         scale: 3,
-                    }))
+                    })))
                     .with_converted_type(ConvertedType::DECIMAL)
                     .with_length(5)
                     .with_precision(9)
@@ -937,10 +941,10 @@ mod tests {
                         "f2",
                         PhysicalType::FIXED_LEN_BYTE_ARRAY,
                     )
-                    .with_logical_type(Some(LogicalType::Decimal {
+                    .with_logical_type(Some(LogicalType::DECIMAL(DecimalType {
                         precision: 38,
                         scale: 18,
-                    }))
+                    })))
                     .with_converted_type(ConvertedType::DECIMAL)
                     .with_length(16)
                     .with_precision(38)
@@ -988,7 +992,9 @@ mod tests {
                         Arc::new(
                             Type::group_type_builder("a1")
                                 .with_repetition(Repetition::OPTIONAL)
-                                .with_logical_type(Some(LogicalType::List))
+                                .with_logical_type(Some(LogicalType::LIST(
+                                    Default::default(),
+                                )))
                                 .with_converted_type(ConvertedType::LIST)
                                 .with_fields(&mut vec![Arc::new(
                                     Type::primitive_type_builder(
@@ -1006,7 +1012,9 @@ mod tests {
                         Arc::new(
                             Type::group_type_builder("b1")
                                 .with_repetition(Repetition::OPTIONAL)
-                                .with_logical_type(Some(LogicalType::List))
+                                .with_logical_type(Some(LogicalType::LIST(
+                                    Default::default(),
+                                )))
                                 .with_converted_type(ConvertedType::LIST)
                                 .with_fields(&mut vec![Arc::new(
                                     Type::group_type_builder("b2")
@@ -1093,7 +1101,7 @@ mod tests {
             ),
             Arc::new(
                 Type::primitive_type_builder("_5", PhysicalType::INT32)
-                    .with_logical_type(Some(LogicalType::Date))
+                    .with_logical_type(Some(LogicalType::DATE(Default::default())))
                     .with_converted_type(ConvertedType::DATE)
                     .build()
                     .unwrap(),
@@ -1140,20 +1148,20 @@ mod tests {
             Arc::new(
                 Type::primitive_type_builder("_1", PhysicalType::INT32)
                     .with_repetition(Repetition::REQUIRED)
-                    .with_logical_type(Some(LogicalType::Integer {
+                    .with_logical_type(Some(LogicalType::INTEGER(IntType {
                         bit_width: 8,
                         is_signed: true,
-                    }))
+                    })))
                     .build()
                     .unwrap(),
             ),
             Arc::new(
                 Type::primitive_type_builder("_2", PhysicalType::INT32)
                     .with_repetition(Repetition::REQUIRED)
-                    .with_logical_type(Some(LogicalType::Integer {
+                    .with_logical_type(Some(LogicalType::INTEGER(IntType {
                         bit_width: 16,
                         is_signed: false,
-                    }))
+                    })))
                     .build()
                     .unwrap(),
             ),
@@ -1171,49 +1179,49 @@ mod tests {
             ),
             Arc::new(
                 Type::primitive_type_builder("_5", PhysicalType::INT32)
-                    .with_logical_type(Some(LogicalType::Date))
+                    .with_logical_type(Some(LogicalType::DATE(Default::default())))
                     .build()
                     .unwrap(),
             ),
             Arc::new(
                 Type::primitive_type_builder("_6", PhysicalType::INT32)
-                    .with_logical_type(Some(LogicalType::Time {
+                    .with_logical_type(Some(LogicalType::TIME(TimeType {
                         unit: TimeUnit::MILLIS(Default::default()),
                         is_adjusted_to_u_t_c: false,
-                    }))
+                    })))
                     .build()
                     .unwrap(),
             ),
             Arc::new(
                 Type::primitive_type_builder("_7", PhysicalType::INT64)
-                    .with_logical_type(Some(LogicalType::Time {
+                    .with_logical_type(Some(LogicalType::TIME(TimeType {
                         unit: TimeUnit::MICROS(Default::default()),
                         is_adjusted_to_u_t_c: true,
-                    }))
+                    })))
                     .build()
                     .unwrap(),
             ),
             Arc::new(
                 Type::primitive_type_builder("_8", PhysicalType::INT64)
-                    .with_logical_type(Some(LogicalType::Timestamp {
+                    .with_logical_type(Some(LogicalType::TIMESTAMP(TimestampType {
                         unit: TimeUnit::MILLIS(Default::default()),
                         is_adjusted_to_u_t_c: true,
-                    }))
+                    })))
                     .build()
                     .unwrap(),
             ),
             Arc::new(
                 Type::primitive_type_builder("_9", PhysicalType::INT64)
-                    .with_logical_type(Some(LogicalType::Timestamp {
+                    .with_logical_type(Some(LogicalType::TIMESTAMP(TimestampType {
                         unit: TimeUnit::NANOS(Default::default()),
                         is_adjusted_to_u_t_c: false,
-                    }))
+                    })))
                     .build()
                     .unwrap(),
             ),
             Arc::new(
                 Type::primitive_type_builder("_10", PhysicalType::BYTE_ARRAY)
-                    .with_logical_type(Some(LogicalType::String))
+                    .with_logical_type(Some(LogicalType::STRING(Default::default())))
                     .build()
                     .unwrap(),
             ),

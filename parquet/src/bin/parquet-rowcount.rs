@@ -21,45 +21,60 @@
 //!
 //! `parquet-rowcount` can be installed using `cargo`:
 //! ```
-//! cargo install parquet --features=cli
+//! cargo install parquet
 //! ```
-//! After this `parquet-rowcount` should be available:
+//! After this `parquet-rowcount` should be globally available:
 //! ```
 //! parquet-rowcount XYZ.parquet
 //! ```
 //!
 //! The binary can also be built from the source code and run as follows:
 //! ```
-//! cargo run --features=cli --bin parquet-rowcount XYZ.parquet ABC.parquet ZXC.parquet
+//! cargo run --bin parquet-rowcount XYZ.parquet ABC.parquet ZXC.parquet
 //! ```
+//!
+//! # Usage
+//! ```
+//! parquet-rowcount <file-paths>...
+//! ```
+//!
+//! ## Flags
+//!     -h, --help       Prints help information
+//!     -V, --version    Prints version information
+//!
+//! ## Args
+//!     <file-paths>...    List of Parquet files to read from
 //!
 //! Note that `parquet-rowcount` reads full file schema, no projection or filtering is
 //! applied.
 
-use clap::Parser;
-use parquet::file::reader::{FileReader, SerializedFileReader};
-use std::{fs::File, path::Path};
+extern crate parquet;
 
-#[derive(Debug, Parser)]
-#[clap(author, version, about("Binary file to return the number of rows found from Parquet file(s)"), long_about = None)]
-struct Args {
-    #[clap(
-        short,
-        long,
-        number_of_values(1),
-        help("List of Parquet files to read from separated by space")
-    )]
-    file_paths: Vec<String>,
-}
+use std::{env, fs::File, path::Path};
+
+use clap::{crate_authors, crate_version, App, Arg};
+
+use parquet::file::reader::{FileReader, SerializedFileReader};
 
 fn main() {
-    let args = Args::parse();
+    let matches = App::new("parquet-rowcount")
+        .version(crate_version!())
+        .author(crate_authors!())
+        .about("Return number of rows in Parquet file")
+        .arg(
+            Arg::with_name("file_paths")
+                .value_name("file-paths")
+                .required(true)
+                .multiple(true)
+                .help("List of Parquet files to read from separated by space"),
+        )
+        .get_matches();
 
-    for filename in args.file_paths {
-        let path = Path::new(&filename);
-        let file = File::open(path).expect("Unable to open file");
-        let parquet_reader =
-            SerializedFileReader::new(file).expect("Unable to read file");
+    let filenames: Vec<&str> = matches.values_of("file_paths").unwrap().collect();
+    for filename in &filenames {
+        let path = Path::new(filename);
+        let file = File::open(path).unwrap();
+        let parquet_reader = SerializedFileReader::new(file).unwrap();
         let row_group_metadata = parquet_reader.metadata().row_groups();
         let mut total_num_rows = 0;
 

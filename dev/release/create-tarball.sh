@@ -53,17 +53,6 @@ fi
 tag=$1
 rc=$2
 
-
-# mac tar doesn't have --delete, so use gnutar
-# e.g. brew install gtar
-if command -v gtar &> /dev/null
-then
-    echo "using gtar (gnu)tar"
-    tar=gtar
-else
-    tar=tar
-fi
-
 release_hash=$(cd "${SOURCE_TOP_DIR}" && git rev-list --max-count=1 ${tag})
 
 release=apache-arrow-rs-${tag}
@@ -114,18 +103,10 @@ MAIL
 echo "---------------------------------------------------------"
 
 
-
 # create <tarball> containing the files in git at $release_hash
 # the files in the tarball are prefixed with {tag} (e.g. 4.0.1)
-# use --delete to filter out:
-# 1. `object_store` files
-# 2. Workspace `Cargo.toml` file (which refers to object_store)
 mkdir -p ${distdir}
-(cd "${SOURCE_TOP_DIR}" && \
-     git archive ${release_hash} --prefix ${release}/ \
-         | $tar --delete ${release}/'object_store' \
-         | $tar --delete ${release}/'Cargo.toml' \
-         | gzip > ${tarball})
+(cd "${SOURCE_TOP_DIR}" && git archive ${release_hash} --prefix ${release}/ | gzip > ${tarball})
 
 echo "Running rat license checker on ${tarball}"
 ${SOURCE_DIR}/run-rat.sh ${tarball}

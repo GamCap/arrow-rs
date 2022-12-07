@@ -40,12 +40,6 @@ pub struct TreeBuilder {
     batch_size: usize,
 }
 
-impl Default for TreeBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl TreeBuilder {
     /// Creates new tree builder with default parameters.
     pub fn new() -> Self {
@@ -828,31 +822,61 @@ mod tests {
     use crate::file::reader::{FileReader, SerializedFileReader};
     use crate::record::api::{Field, Row, RowAccessor, RowFormatter};
     use crate::schema::parser::parse_message_type;
-    use crate::util::test_common::file_util::{get_test_file, get_test_path};
+    use crate::util::test_common::{get_test_file, get_test_path};
     use std::convert::TryFrom;
 
     // Convenient macros to assemble row, list, map, and group.
 
     macro_rules! row {
-        ($($e:tt)*) => {
+        () => {
             {
-                make_row(vec![$($e)*])
+                let result = Vec::new();
+                make_row(result)
+            }
+        };
+        ( $( $e:expr ), + ) => {
+            {
+                let mut result = Vec::new();
+                $(
+                    result.push($e);
+                )*
+                    make_row(result)
             }
         }
     }
 
     macro_rules! list {
-        ($($e:tt)*) => {
+        () => {
             {
-                Field::ListInternal(make_list(vec![$($e)*]))
+                let result = Vec::new();
+                Field::ListInternal(make_list(result))
+            }
+        };
+        ( $( $e:expr ), + ) => {
+            {
+                let mut result = Vec::new();
+                $(
+                    result.push($e);
+                )*
+                    Field::ListInternal(make_list(result))
             }
         }
     }
 
     macro_rules! map {
-        ($($e:tt)*) => {
+        () => {
             {
-                Field::MapInternal(make_map(vec![$($e)*]))
+                let result = Vec::new();
+                Field::MapInternal(make_map(result))
+            }
+        };
+        ( $( $e:expr ), + ) => {
+            {
+                let mut result = Vec::new();
+                $(
+                    result.push($e);
+                )*
+                    Field::MapInternal(make_map(result))
             }
         }
     }

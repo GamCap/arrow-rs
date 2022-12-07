@@ -19,6 +19,8 @@
 
 pub mod kernels;
 
+mod util;
+
 pub use self::kernels::aggregate::*;
 pub use self::kernels::arithmetic::*;
 pub use self::kernels::arity::*;
@@ -27,7 +29,6 @@ pub use self::kernels::cast::*;
 pub use self::kernels::comparison::*;
 pub use self::kernels::concat::*;
 pub use self::kernels::filter::*;
-pub use self::kernels::interleave::*;
 pub use self::kernels::limit::*;
 pub use self::kernels::partition::*;
 pub use self::kernels::regexp::*;
