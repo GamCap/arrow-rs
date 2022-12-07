@@ -32,7 +32,7 @@ include = [
 edition = "2018"
 
 [lib]
-name = "arrow_gamcap"
+name = "arrow"
 path = "src/lib.rs"
 
 [dependencies]
