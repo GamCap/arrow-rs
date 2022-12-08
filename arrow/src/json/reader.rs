@@ -46,6 +46,8 @@ use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use std::ops::Neg;
 use std::sync::Arc;
 
+use std::num::ParseIntError;
+
 use indexmap::map::IndexMap as HashMap;
 use indexmap::set::IndexSet as HashSet;
 use lazy_static::lazy_static;
@@ -59,6 +61,8 @@ use crate::error::{ArrowError, Result};
 use crate::record_batch::RecordBatch;
 use crate::util::bit_util;
 use crate::{array::*, buffer::Buffer};
+
+use std::str::FromStr;
 
 lazy_static! {
     static ref PARSE_DECIMAL_RE: Regex =
@@ -535,8 +539,8 @@ fn collect_field_types_from_object(
 /// interpreted as Strings. We should match Spark's behavior once we added more JSON parsing
 /// kernels in the future.
 pub fn infer_json_schema_from_iterator<I>(value_iter: I) -> Result<Schema>
-where
-    I: Iterator<Item = Result<Value>>,
+    where
+        I: Iterator<Item=Result<Value>>,
 {
     let mut field_types: HashMap<String, InferredType> = HashMap::new();
 
@@ -630,8 +634,8 @@ impl Decoder {
 
     /// Read the next batch of records
     pub fn next_batch<I>(&self, value_iter: &mut I) -> Result<Option<RecordBatch>>
-    where
-        I: Iterator<Item = Result<Value>>,
+        where
+            I: Iterator<Item=Result<Value>>,
     {
         let mut rows: Vec<Value> = Vec::with_capacity(self.batch_size);
 
@@ -749,8 +753,8 @@ impl Decoder {
         col_name: &str,
         rows: &[Value],
     ) -> Result<ArrayRef>
-    where
-        DICT_TY: ArrowPrimitiveType + ArrowDictionaryKeyType,
+        where
+            DICT_TY: ArrowPrimitiveType + ArrowDictionaryKeyType,
     {
         let mut builder: Box<dyn ArrayBuilder> = match data_type {
             DataType::Utf8 => {
@@ -766,7 +770,7 @@ impl Decoder {
                 return Err(ArrowError::JsonError(format!(
                     "Nested list data builder type is not supported: {:?}",
                     e
-                )))
+                )));
             }
         };
 
@@ -806,7 +810,7 @@ impl Decoder {
                         let builder = builder
                             .as_any_mut()
                             .downcast_mut::<ListBuilder<StringBuilder>>()
-                            .ok_or_else(||ArrowError::JsonError(
+                            .ok_or_else(|| ArrowError::JsonError(
                                 "Cast failed for ListBuilder<StringBuilder> during nested data parsing".to_string(),
                             ))?;
                         for val in vals {
@@ -821,7 +825,7 @@ impl Decoder {
                         builder.append(true)?;
                     }
                     DataType::Dictionary(_, _) => {
-                        let builder = builder.as_any_mut().downcast_mut::<ListBuilder<StringDictionaryBuilder<DICT_TY>>>().ok_or_else(||ArrowError::JsonError(
+                        let builder = builder.as_any_mut().downcast_mut::<ListBuilder<StringDictionaryBuilder<DICT_TY>>>().ok_or_else(|| ArrowError::JsonError(
                             "Cast failed for ListBuilder<StringDictionaryBuilder> during nested data parsing".to_string(),
                         ))?;
                         for val in vals {
@@ -839,7 +843,7 @@ impl Decoder {
                         return Err(ArrowError::JsonError(format!(
                             "Nested list data builder type is not supported: {:?}",
                             e
-                        )))
+                        )));
                     }
                 }
             }
@@ -854,8 +858,8 @@ impl Decoder {
         &self,
         row_len: usize,
     ) -> Result<StringDictionaryBuilder<T>>
-    where
-        T: ArrowPrimitiveType + ArrowDictionaryKeyType,
+        where
+            T: ArrowPrimitiveType + ArrowDictionaryKeyType,
     {
         let key_builder = PrimitiveBuilder::<T>::new(row_len);
         let values_builder = StringBuilder::new(row_len * 5);
@@ -927,9 +931,9 @@ impl Decoder {
         rows: &[Value],
         col_name: &str,
     ) -> Result<ArrayRef>
-    where
-        T: ArrowNumericType,
-        T::Native: num::NumCast,
+        where
+            T: ArrowNumericType,
+            T::Native: num::NumCast,
     {
         Ok(Arc::new(
             rows.iter()
@@ -1023,7 +1027,7 @@ impl Decoder {
             DataType::UInt32 => self.read_primitive_list_values::<UInt32Type>(rows),
             DataType::UInt64 => self.read_primitive_list_values::<UInt64Type>(rows),
             DataType::Float16 => {
-                return Err(ArrowError::JsonError("Float16 not supported".to_string()))
+                return Err(ArrowError::JsonError("Float16 not supported".to_string()));
             }
             DataType::Float32 => self.read_primitive_list_values::<Float32Type>(rows),
             DataType::Float64 => self.read_primitive_list_values::<Float64Type>(rows),
@@ -1034,7 +1038,7 @@ impl Decoder {
             | DataType::Time64(_) => {
                 return Err(ArrowError::JsonError(
                     "Temporal types are not yet supported, see ARROW-4803".to_string(),
-                ))
+                ));
             }
             DataType::Utf8 => flatten_json_string_values(rows)
                 .into_iter()
@@ -1320,7 +1324,7 @@ impl Decoder {
                         field.name(),
                         field.data_type(),
                         *precision,
-                        *scale
+                        *scale,
                     ),
                     _ => Err(ArrowError::JsonError(format!(
                         "{:?} type is not supported",
@@ -1347,7 +1351,7 @@ impl Decoder {
             _ => {
                 return Err(ArrowError::JsonError(
                     "Cannot build decimal array from non-decimal type".to_string(),
-                ))
+                ));
             }
         };
         for row in rows {
@@ -1357,30 +1361,17 @@ impl Decoder {
                     builder.append_null()?;
                 }
                 Some(s) => {
-                    if let Some(str_v) = s.as_str() {
-                        if str_v.is_empty() {
-                            // append null
-                            builder.append_null()?;
+                    if let Ok(v) = serde_json::to_string(s) {
+                        let result = parse_decimal_with_parameter(&v, precision, scale);
+                        if let Ok(num) = result {
+                            builder.append_value(num)?;
                         } else {
-                            let decimal_value: Result<i128> =
-                                parse_decimal_with_parameter(str_v, precision, scale);
-                            match decimal_value {
-                                Ok(v) => {
-                                    builder.append_value(v)?;
-                                }
-                                Err(e) => {
-                                    return Err(e);
-                                }
-                            }
+                            println!("Failed to parse i128: {:?}", result);
+                            builder.append_null()?;
                         }
-                    }else {
+                    } else {
                         builder.append_null()?;
                     }
-                }
-                _ => {
-                    return Err(ArrowError::JsonError(
-                        "Error while reading the field".to_string(),
-                    ))
                 }
             }
         }
@@ -1490,9 +1481,9 @@ impl Decoder {
         rows: &[Value],
         col_name: &str,
     ) -> Result<ArrayRef>
-    where
-        T::Native: num::NumCast,
-        T: ArrowPrimitiveType + ArrowDictionaryKeyType,
+        where
+            T::Native: num::NumCast,
+            T: ArrowPrimitiveType + ArrowDictionaryKeyType,
     {
         let mut builder: StringDictionaryBuilder<T> =
             self.build_string_dictionary_builder(rows.len())?;
@@ -1512,9 +1503,9 @@ impl Decoder {
 
     /// Read the primitive list's values into ArrayData
     fn read_primitive_list_values<T>(&self, rows: &[Value]) -> ArrayData
-    where
-        T: ArrowPrimitiveType + ArrowNumericType,
-        T::Native: num::NumCast,
+        where
+            T: ArrowPrimitiveType + ArrowNumericType,
+            T::Native: num::NumCast,
     {
         let values = rows
             .iter()
@@ -1661,6 +1652,7 @@ fn flatten_json_string_values(values: &[Value]) -> Vec<Option<String>> {
         })
         .collect::<Vec<Option<_>>>()
 }
+
 /// JSON file reader
 #[derive(Debug)]
 pub struct Reader<R: Read> {
@@ -1799,8 +1791,8 @@ impl ReaderBuilder {
 
     /// Create a new `Reader` from the `ReaderBuilder`
     pub fn build<R>(self, source: R) -> Result<Reader<R>>
-    where
-        R: Read + Seek,
+        where
+            R: Read + Seek,
     {
         let mut buf_reader = BufReader::new(source);
 
@@ -2150,21 +2142,21 @@ mod tests {
             List(Box::new(Field::new("item", Float64, true))),
             coerce_data_type(vec![
                 &Float64,
-                &List(Box::new(Field::new("item", Float64, true)))
+                &List(Box::new(Field::new("item", Float64, true))),
             ])
         );
         assert_eq!(
             List(Box::new(Field::new("item", Float64, true))),
             coerce_data_type(vec![
                 &Float64,
-                &List(Box::new(Field::new("item", Int64, true)))
+                &List(Box::new(Field::new("item", Int64, true))),
             ])
         );
         assert_eq!(
             List(Box::new(Field::new("item", Int64, true))),
             coerce_data_type(vec![
                 &Int64,
-                &List(Box::new(Field::new("item", Int64, true)))
+                &List(Box::new(Field::new("item", Int64, true))),
             ])
         );
         // boolean and number are incompatible, return utf8
@@ -2172,7 +2164,7 @@ mod tests {
             List(Box::new(Field::new("item", Utf8, true))),
             coerce_data_type(vec![
                 &Boolean,
-                &List(Box::new(Field::new("item", Float64, true)))
+                &List(Box::new(Field::new("item", Float64, true))),
             ])
         );
     }
@@ -2472,13 +2464,13 @@ mod tests {
         let expected_keys = StringArray::from(vec![
             "long", "short", "long", "short", "hedged", "long", "short",
         ])
-        .data()
-        .clone();
+            .data()
+            .clone();
         let expected_value_array_data = StringArray::from(vec![
             "$AAA", "$BBB", "$CCC", "$D", "$AAA", "$CCC", "$D", "$YYY", "$D",
         ])
-        .data()
-        .clone();
+            .data()
+            .clone();
         // Create the list that holds ["$_", "$_"]
         let expected_values = ArrayDataBuilder::new(value_list_type)
             .len(7)
@@ -2568,7 +2560,7 @@ mod tests {
                 Some(1),
                 Some(0),
                 Some(0),
-                None
+                None,
             ])
         );
     }
@@ -2724,7 +2716,7 @@ mod tests {
             &List(Box::new(Field::new(
                 "item",
                 Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
-                true
+                true,
             ))),
             events.1.data_type()
         );
@@ -2785,7 +2777,7 @@ mod tests {
             &List(Box::new(Field::new(
                 "item",
                 Dictionary(Box::new(DataType::UInt64), Box::new(DataType::Utf8)),
-                true
+                true,
             ))),
             events.1.data_type()
         );
@@ -2977,9 +2969,9 @@ mod tests {
                 Ok(serde_json::json!({"c1": {"a": false, "b": null}, "c2": 0})),
                 Ok(serde_json::json!({"c1": {"a": true, "b": {"c": "text"}}, "c3": "ok"})),
             ]
-            .into_iter(),
+                .into_iter(),
         )
-        .unwrap();
+            .unwrap();
 
         assert_eq!(inferred_schema, schema);
     }
@@ -3019,9 +3011,9 @@ mod tests {
                 })),
                 Ok(serde_json::json!({"c1": [], "c2": 0.5, "c3": []})),
             ]
-            .into_iter(),
+                .into_iter(),
         )
-        .unwrap();
+            .unwrap();
 
         assert_eq!(inferred_schema, schema);
     }
@@ -3055,9 +3047,9 @@ mod tests {
                     "c2": 0.11,
                 })),
             ]
-            .into_iter(),
+                .into_iter(),
         )
-        .unwrap();
+            .unwrap();
 
         assert_eq!(inferred_schema, schema);
     }
@@ -3246,7 +3238,7 @@ mod tests {
                         "c1": [["foo"], ["bar"]],
                     })),
                 ]
-                .into_iter(),
+                    .into_iter(),
             )
             .unwrap()
             .unwrap();
@@ -3284,7 +3276,7 @@ mod tests {
                         "c1": [{"a": 10}, {"a": 11}],
                     })),
                 ]
-                .into_iter(),
+                    .into_iter(),
             )
             .unwrap()
             .unwrap();
@@ -3307,7 +3299,7 @@ mod tests {
                         "c1": "foo",
                     })),
                 ]
-                .into_iter(),
+                    .into_iter(),
             )
             .unwrap()
             .unwrap();
